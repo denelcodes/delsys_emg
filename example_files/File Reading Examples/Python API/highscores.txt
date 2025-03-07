@@ -1,0 +1,5 @@
+ds,27
+hi,17
+temp2,7
+temp1,2
+temp2,2
