@@ -121,9 +121,11 @@ while true
             fid_out = fopen('finger_output.txt', 'a');
             fprintf(fid_out, 'Sensor1: %s\n', newFinger);
             fclose(fid_out);
+            % Print to console as well
+            disp(['Sensor 1: ' newFinger]);  % This will print the output to the console
             sensor1_current_finger = newFinger;
         end
-    
+ 
         % Reset the trigger state when the signal drops below the pinky threshold
         if currentValue < sensor1_pinky_lower
             sensor1_current_finger = '';
@@ -144,13 +146,17 @@ while true
         elseif currentValue2 >= sensor2_pinky_lower
             newFinger2 = 'p';
         end
-    
+            
+        % Log new event only if the threshold state has changed
         if ~isempty(newFinger2) && ~strcmp(newFinger2, sensor2_current_finger)
             fid_out = fopen('finger_output.txt', 'a');
             fprintf(fid_out, 'Sensor2: %s\n', newFinger2);
             fclose(fid_out);
+            % Print to console as well
+            disp(['Sensor 2: ' newFinger2]);  % This will print the output to the console
             sensor2_current_finger = newFinger2;
         end
+
     
         if currentValue2 < sensor2_pinky_lower
             sensor2_current_finger = '';
