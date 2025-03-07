@@ -7,10 +7,10 @@ Servo servoMiddle;
 Servo servoIndex;
 
 // Assign pins (adjust as needed)
-const int pinPinky = 1;
-const int pinRing = 2;
+const int pinPinky = 5;
+const int pinRing = 4;
 const int pinMiddle = 3;
-const int pinIndex = 4;
+const int pinIndex = 2;
 
 void setup() {
   Serial.begin(9600);
