@@ -21,7 +21,7 @@ class DataKernel():
         outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
         if outArr is not None:
             # --- NEW CODE BLOCK FOR FILE OUTPUT ---
-            with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\Working - Copy\\matlab\\raw_emg_data.txt', 'w') as file:
+            with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
                 # Loop through each sensor's data in the output array.
                 for i, sensor_data in enumerate(outArr):
                     # Convert the first element of sensor_data (assumed to be a numpy array) to a list.
