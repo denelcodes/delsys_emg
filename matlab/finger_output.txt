@@ -1,0 +1,4 @@
+# This file will contain commands for the Arduino.
+# Example command format:
+# Sensor1: p
+# Sensor2: i
