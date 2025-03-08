@@ -36,3 +36,6 @@ def main():
             # Reset commands for next cycle
             sensor1_cmd = 'n'
             sensor2_cmd = 'n'
+
+if __name__ == "__main__":
+    main()
