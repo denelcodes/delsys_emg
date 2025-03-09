@@ -1,2 +1,3 @@
 #ignore all .lic files
 *lic
+.aider*

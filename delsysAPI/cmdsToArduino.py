@@ -1,8 +1,7 @@
 import time
 import serial
-
-# Set up the serial connection (adjust 'COM3' and baud rate as needed)
-ser = serial.Serial('COM3', 9600, timeout=1)
+# Set up the serial connection (adjust 'COM10' and baud rate as needed)
+ser = serial.Serial('COM10', 9600, timeout=1)
 
 def main():
     # Open the finger output file in read mode and seek to the end
