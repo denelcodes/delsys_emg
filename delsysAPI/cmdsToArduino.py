@@ -1,8 +1,7 @@
 import time
 import serial
-#change come port to com10 AI?
-# Set up the serial connection (adjust 'COM9' and baud rate as needed)
-ser = serial.Serial('COM9', 9600, timeout=1)
+# Set up the serial connection (adjust 'COM10' and baud rate as needed)
+ser = serial.Serial('COM10', 9600, timeout=1)
 
 def main():
     # Open the finger output file in read mode and seek to the end
@@ -20,7 +19,7 @@ def main():
                     line = line.strip()
                     # Expecting lines like "Sensor1: p" or "Sensor2: i"
                     if line.startswith("Sensor1:"):
-                        parts = lin/e.split(":")
+                        parts = line.split(":")
                         sensor1_cmd = parts[1].strip() if len(parts) > 1 else 'n'
                     elif line.startswith("Sensor2:"):
                         parts = line.split(":")
