@@ -11,6 +11,8 @@
 % drawn only on the low-pass smoothed envelope plots.
 
 %% Threshold Variables (adjust as needed)
+% add a way to change the thrshold values on the plot windows using a slider AI!
+
 % Sensor 1 thresholds
 sensor1_pinky_lower  = 0.01;
 sensor1_pinky_upper  = 0.02;
