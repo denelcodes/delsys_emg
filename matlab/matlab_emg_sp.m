@@ -1,82 +1,197 @@
-% live_plot_separate_thresholds.m
-% This script continuously reads live_data.txt, accumulates sensor data,
-% processes it in three stages, and displays the results in separate figures.
-%
-% Processing stages for each sensor:
-%   1. Raw Live Data
-%   2. Band-Pass Filtered + Absolute Value
-%   3. Low-Pass Filtered (Smoothed Envelope) with Threshold Lines
-%
-% Threshold lines for four finger groups (Pinky, Ring, Middle, Index) are
-% drawn only on the low-pass smoothed envelope plots.
+%% Initialization
 
-%% Threshold Variables (adjust as needed)
-% add a way to change the thrshold values on the plot windows using a slider AI!
+% ----- Sensor 1 Figure & UI -----
+figure(1);
+set(gcf,'Units','normalized','Position',[0.05 0.1 0.75 0.8]);  % Adjust figure size
 
-% Sensor 1 thresholds
-sensor1_pinky_lower  = 0.01;
-sensor1_pinky_upper  = 0.02;
-sensor1_ring_lower   = 0.02;
-sensor1_ring_upper   = 0.03;
-sensor1_middle_lower = 0.03;
-sensor1_middle_upper = 0.04;
-sensor1_index_lower  = 0.04;
-sensor1_index_upper  = 0.05;
+% Create Sensor 1 axes for plots (using a 3x1 layout)
+ax1_s1 = subplot(3,1,1);  % Raw Data
+title(ax1_s1, 'Sensor 1: Raw Data');
+xlabel(ax1_s1, 'Sample Number'); ylabel(ax1_s1, 'Amplitude');
 
-% Sensor 2 thresholds
-sensor2_pinky_lower  = 0.01;
-sensor2_pinky_upper  = 0.02;
-sensor2_ring_lower   = 0.02;
-sensor2_ring_upper   = 0.03;
-sensor2_middle_lower = 0.03;
-sensor2_middle_upper = 0.04;
-sensor2_index_lower  = 0.04;
-sensor2_index_upper  = 0.05;
+ax2_s1 = subplot(3,1,2);  % Band-Pass + Abs
+title(ax2_s1, 'Sensor 1: Band-Pass + Abs');
+xlabel(ax2_s1, 'Sample Number'); ylabel(ax2_s1, 'Amplitude');
 
-%% Filter Design Parameters
-fs = 1000;  % Sampling frequency in Hz
+ax3_s1 = subplot(3,1,3);  % Envelope
+title(ax3_s1, 'Sensor 1: Low-Pass Smoothed Envelope');
+xlabel(ax3_s1, 'Sample Number'); ylabel(ax3_s1, 'Amplitude');
 
-% Butterworth band-pass filter (e.g., 20-450 Hz for EMG)
+% Create slider controls for Sensor 1 thresholds with labels
+% Pinky Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.85, 0.1, 0.03],'String','Pinky Lower');
+slider_s1_pinky_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.82, 0.1, 0.03],'Min',0,'Max',1,'Value',0.01);
+
+% Pinky Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.79, 0.1, 0.03],'String','Pinky Upper');
+slider_s1_pinky_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.76, 0.1, 0.03],'Min',0,'Max',1,'Value',0.02);
+
+% Ring Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.73, 0.1, 0.03],'String','Ring Lower');
+slider_s1_ring_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.70, 0.1, 0.03],'Min',0,'Max',1,'Value',0.02);
+
+% Ring Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.67, 0.1, 0.03],'String','Ring Upper');
+slider_s1_ring_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.64, 0.1, 0.03],'Min',0,'Max',1,'Value',0.03);
+
+% Middle Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.61, 0.1, 0.03],'String','Middle Lower');
+slider_s1_middle_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.58, 0.1, 0.03],'Min',0,'Max',1,'Value',0.03);
+
+% Middle Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.55, 0.1, 0.03],'String','Middle Upper');
+slider_s1_middle_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.52, 0.1, 0.03],'Min',0,'Max',1,'Value',0.04);
+
+% Index Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.49, 0.1, 0.03],'String','Index Lower');
+slider_s1_index_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.46, 0.1, 0.03],'Min',0,'Max',1,'Value',0.04);
+
+% Index Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.43, 0.1, 0.03],'String','Index Upper');
+slider_s1_index_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.40, 0.1, 0.03],'Min',0,'Max',1,'Value',0.05);
+
+% ----- Sensor 2 Figure & UI -----
+figure(2);
+set(gcf,'Units','normalized','Position',[0.05 0.1 0.75 0.8]);  % Adjust figure size
+
+ax1_s2 = subplot(3,1,1);  % Raw Data
+title(ax1_s2, 'Sensor 2: Raw Data');
+xlabel(ax1_s2, 'Sample Number'); ylabel(ax1_s2, 'Amplitude');
+
+ax2_s2 = subplot(3,1,2);  % Band-Pass + Abs
+title(ax2_s2, 'Sensor 2: Band-Pass + Abs');
+xlabel(ax2_s2, 'Sample Number'); ylabel(ax2_s2, 'Amplitude');
+
+ax3_s2 = subplot(3,1,3);  % Envelope
+title(ax3_s2, 'Sensor 2: Low-Pass Smoothed Envelope');
+xlabel(ax3_s2, 'Sample Number'); ylabel(ax3_s2, 'Amplitude');
+
+% Create slider controls for Sensor 2 thresholds with labels
+% Pinky Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.85, 0.1, 0.03],'String','Pinky Lower');
+slider_s2_pinky_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.82, 0.1, 0.03],'Min',0,'Max',1,'Value',0.01);
+
+% Pinky Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.79, 0.1, 0.03],'String','Pinky Upper');
+slider_s2_pinky_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.76, 0.1, 0.03],'Min',0,'Max',1,'Value',0.02);
+
+% Ring Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.73, 0.1, 0.03],'String','Ring Lower');
+slider_s2_ring_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.70, 0.1, 0.03],'Min',0,'Max',1,'Value',0.02);
+
+% Ring Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.67, 0.1, 0.03],'String','Ring Upper');
+slider_s2_ring_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.64, 0.1, 0.03],'Min',0,'Max',1,'Value',0.03);
+
+% Middle Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.61, 0.1, 0.03],'String','Middle Lower');
+slider_s2_middle_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.58, 0.1, 0.03],'Min',0,'Max',1,'Value',0.03);
+
+% Middle Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.55, 0.1, 0.03],'String','Middle Upper');
+slider_s2_middle_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.52, 0.1, 0.03],'Min',0,'Max',1,'Value',0.04);
+
+% Index Lower
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.49, 0.1, 0.03],'String','Index Lower');
+slider_s2_index_lower = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.46, 0.1, 0.03],'Min',0,'Max',1,'Value',0.04);
+
+% Index Upper
+uicontrol('Style','text','Units','normalized',...
+    'Position',[0.87, 0.43, 0.1, 0.03],'String','Index Upper');
+slider_s2_index_upper = uicontrol('Style','slider','Units','normalized',...
+    'Position',[0.87, 0.40, 0.1, 0.03],'Min',0,'Max',1,'Value',0.05);
+
+%% Other Initialization Variables
+
+fs = 1000;  % Sampling frequency
 order_bp = 4;
-low_cutoff = 20;   % Hz
-high_cutoff = 450; % Hz
+low_cutoff = 20; high_cutoff = 450;
 [b_bp, a_bp] = butter(order_bp, [low_cutoff high_cutoff] / (fs/2));
 
-% Butterworth low-pass filter for envelope smoothing (e.g., 4 Hz cutoff)
 order_lp = 4;
-lp_cutoff = 4;   % Hz
+lp_cutoff = 4;
 [b_lp, a_lp] = butter(order_lp, lp_cutoff / (fs/2));
 
-%% Initialize History Arrays
 sensor1_history = [];
 sensor2_history = [];
 
-% Initialize state variables for threshold detection
-sensor1_current_finger = '';
-sensor2_current_finger = '';
+% For delayed file writes (if desired)
+delay_threshold = 1;  % seconds
+sensor1_last_write = tic; % tic and toc matlab timer
+sensor2_last_write = tic;
 
-% Create figures for Sensor 1 and Sensor 2
-figure(1); % Sensor 1
-figure(2); % Sensor 2
-
+%% Main Loop
 while true
-    % Open the file for reading
-    fid = fopen('raw_emg_data.txt', 'r');
-    if fid == -1
-        disp('Cannot open file. Check the filename or file path.');
+    %% Update Threshold Values from Sliders
+    % Sensor 1 thresholds:
+    sensor1_pinky_lower  = get(slider_s1_pinky_lower, 'Value');
+    sensor1_pinky_upper  = get(slider_s1_pinky_upper, 'Value');
+    sensor1_ring_lower   = get(slider_s1_ring_lower, 'Value');
+    sensor1_ring_upper   = get(slider_s1_ring_upper, 'Value');
+    sensor1_middle_lower = get(slider_s1_middle_lower, 'Value');
+    sensor1_middle_upper = get(slider_s1_middle_upper, 'Value');
+    sensor1_index_lower  = get(slider_s1_index_lower, 'Value');
+    sensor1_index_upper  = get(slider_s1_index_upper, 'Value');
+    
+    % Sensor 2 thresholds:
+    sensor2_pinky_lower  = get(slider_s2_pinky_lower, 'Value');
+    sensor2_pinky_upper  = get(slider_s2_pinky_upper, 'Value');
+    sensor2_ring_lower   = get(slider_s2_ring_lower, 'Value');
+    sensor2_ring_upper   = get(slider_s2_ring_upper, 'Value');
+    sensor2_middle_lower = get(slider_s2_middle_lower, 'Value');
+    sensor2_middle_upper = get(slider_s2_middle_upper, 'Value');
+    sensor2_index_lower  = get(slider_s2_index_lower, 'Value');
+    sensor2_index_upper  = get(slider_s2_index_upper, 'Value');
+    
+    %% Read and Process Data File
+    if ~exist('raw_emg_data.txt', 'file')
+        disp('raw_emg_data.txt does not exist.');
         pause(1);
         continue;
     end
     
-    % Read entire file content as a string
+    fid = fopen('raw_emg_data.txt', 'r');
+    if fid == -1
+        disp('Cannot open file.');
+        pause(1);
+        continue;
+    end
     fileText = fscanf(fid, '%c');
     fclose(fid);
     
-    % Extract sensor data using regular expressions
     sensor1_tokens = regexp(fileText, 'Sensor\s*1:\s*\[(.*?)\]', 'tokens');
     sensor2_tokens = regexp(fileText, 'Sensor\s*2:\s*\[(.*?)\]', 'tokens');
     
-    % Convert tokens to numeric arrays if available
     if ~isempty(sensor1_tokens)
         sensor1_data = str2num(sensor1_tokens{1}{1});  %#ok<ST2NM>
     else
@@ -89,25 +204,20 @@ while true
         sensor2_data = [];
     end
     
-    % Append new data to the cumulative history
-    sensor1_history = [sensor1_history, sensor1_data];
-    sensor2_history = [sensor2_history, sensor2_data];
+    sensor1_history = [sensor1_history, sensor1_data];  %#ok<AGROW>
+    sensor2_history = [sensor2_history, sensor2_data];  %#ok<AGROW>
     
-    % --- Processing Sensor Data ---
-    % Stage 1 & 2: Band-Pass Filter then take Absolute Value
+    %% Process Sensor Data (Filtering)
     sensor1_bp_abs = abs(filter(b_bp, a_bp, sensor1_history));
     sensor2_bp_abs = abs(filter(b_bp, a_bp, sensor2_history));
     
-    % Stage 3: Low-Pass Filter for envelope smoothing
     sensor1_env = filter(b_lp, a_lp, sensor1_bp_abs);
     sensor2_env = filter(b_lp, a_lp, sensor2_bp_abs);
     
-    % --- Check for Sensor 1 Threshold Crossing ---
+    %% Sensor 1: Threshold Check & (Delayed) Logging
     if ~isempty(sensor1_env)
-        currentValue = sensor1_env(end);  % Latest envelope value for Sensor 1
-        newFinger = '';  % Determine which threshold is currently met
-    
-        % Check thresholds in descending order (higher thresholds take precedence)
+        currentValue = sensor1_env(end);
+        newFinger = '';
         if currentValue >= sensor1_index_lower
             newFinger = 'i';
         elseif currentValue >= sensor1_middle_lower
@@ -117,28 +227,24 @@ while true
         elseif currentValue >= sensor1_pinky_lower
             newFinger = 'p';
         end
-    
-        % Log new event only if the threshold state has changed
-        if ~isempty(newFinger) && ~strcmp(newFinger, sensor1_current_finger)
+        
+        if ~isempty(newFinger) && toc(sensor1_last_write) >= delay_threshold
             fid_out = fopen('finger_output.txt', 'a');
-            fprintf(fid_out, 'Sensor1: %s\n', newFinger);
-            fclose(fid_out);
-            % Print to console as well
-            disp(['Sensor 1: ' newFinger]);  % This will print the output to the console
-            sensor1_current_finger = newFinger;
-        end
- 
-        % Reset the trigger state when the signal drops below the pinky threshold
-        if currentValue < sensor1_pinky_lower
-            sensor1_current_finger = '';
+            if fid_out ~= -1
+                fprintf(fid_out, 'Sensor1: %s\n', newFinger);
+                fclose(fid_out);
+            else
+                warning('Could not open finger_output.txt for writing.');
+            end
+            disp(['Sensor 1: ' newFinger]);
+            sensor1_last_write = tic;
         end
     end
     
-    % --- Check for Sensor 2 Threshold Crossing ---
+    %% Sensor 2: Threshold Check & (Delayed) Logging
     if ~isempty(sensor2_env)
-        currentValue2 = sensor2_env(end);  % Latest envelope value for Sensor 2
+        currentValue2 = sensor2_env(end);
         newFinger2 = '';
-    
         if currentValue2 >= sensor2_index_lower
             newFinger2 = 'i';
         elseif currentValue2 >= sensor2_middle_lower
@@ -148,85 +254,72 @@ while true
         elseif currentValue2 >= sensor2_pinky_lower
             newFinger2 = 'p';
         end
-            
-        % Log new event only if the threshold state has changed
-        if ~isempty(newFinger2) && ~strcmp(newFinger2, sensor2_current_finger)
+        
+        if ~isempty(newFinger2) && toc(sensor2_last_write) >= delay_threshold
             fid_out = fopen('finger_output.txt', 'a');
-            fprintf(fid_out, 'Sensor2: %s\n', newFinger2);
-            fclose(fid_out);
-            % Print to console as well
-            disp(['Sensor 2: ' newFinger2]);  % This will print the output to the console
-            sensor2_current_finger = newFinger2;
-        end
-
-    
-        if currentValue2 < sensor2_pinky_lower
-            sensor2_current_finger = '';
+            if fid_out ~= -1
+                fprintf(fid_out, 'Sensor2: %s\n', newFinger2);
+                fclose(fid_out);
+            else
+                warning('Could not open finger_output.txt for writing.');
+            end
+            disp(['Sensor 2: ' newFinger2]);
+            sensor2_last_write = tic;
         end
     end
     
-    % --- Plotting for Sensor 1 ---
-    figure(1);
-    clf;  % Clear figure
-    % Subplot 1: Raw Data
-    subplot(3,1,1);
-    plot(sensor1_history, 'b');
-    title('Sensor 1: Raw Data');
-    xlabel('Sample Number'); ylabel('Amplitude');
+    %% Update Sensor 1 Plots (using cla so sliders persist)
+    axes(ax1_s1); cla(ax1_s1);
+    plot(ax1_s1, sensor1_history, 'b');
+    title(ax1_s1, 'Sensor 1: Raw Data');
+    xlabel(ax1_s1, 'Sample Number'); ylabel(ax1_s1, 'Amplitude');
     
-    % Subplot 2: Band-Pass Filtered + Absolute Value
-    subplot(3,1,2);
-    plot(sensor1_bp_abs, 'b');
-    title('Sensor 1: Band-Pass + Abs');
-    xlabel('Sample Number'); ylabel('Amplitude');
+    axes(ax2_s1); cla(ax2_s1);
+    plot(ax2_s1, sensor1_bp_abs, 'b');
+    title(ax2_s1, 'Sensor 1: Band-Pass + Abs');
+    xlabel(ax2_s1, 'Sample Number'); ylabel(ax2_s1, 'Amplitude');
     
-    % Subplot 3: Low-Pass Smoothed Envelope with Threshold Lines
-    subplot(3,1,3);
-    plot(sensor1_env, 'b');
-    title('Sensor 1: Low-Pass Smoothed Envelope');
-    xlabel('Sample Number'); ylabel('Amplitude');
-    hold on;
-    yline(sensor1_pinky_lower, '--g', 'Pinky Lower');
-    yline(sensor1_pinky_upper, '--g', 'Pinky Upper');
-    yline(sensor1_ring_lower, '--m', 'Ring Lower');
-    yline(sensor1_ring_upper, '--m', 'Ring Upper');
-    yline(sensor1_middle_lower, '--c', 'Middle Lower');
-    yline(sensor1_middle_upper, '--c', 'Middle Upper');
-    yline(sensor1_index_lower, '--k', 'Index Lower');
-    yline(sensor1_index_upper, '--k', 'Index Upper');
-    hold off;
+    axes(ax3_s1); cla(ax3_s1);
+    plot(ax3_s1, sensor1_env, 'b');
+    title(ax3_s1, 'Sensor 1: Low-Pass Smoothed Envelope');
+    xlabel(ax3_s1, 'Sample Number'); ylabel(ax3_s1, 'Amplitude');
+    hold(ax3_s1, 'on');
+    yline(ax3_s1, sensor1_pinky_lower, '--g', sprintf('Pinky Lower: %.2f', sensor1_pinky_lower));
+    yline(ax3_s1, sensor1_pinky_upper, '--g', sprintf('Pinky Upper: %.2f', sensor1_pinky_upper));
+    yline(ax3_s1, sensor1_ring_lower, '--m', sprintf('Ring Lower: %.2f', sensor1_ring_lower));
+    yline(ax3_s1, sensor1_ring_upper, '--m', sprintf('Ring Upper: %.2f', sensor1_ring_upper));
+    yline(ax3_s1, sensor1_middle_lower, '--c', sprintf('Middle Lower: %.2f', sensor1_middle_lower));
+    yline(ax3_s1, sensor1_middle_upper, '--c', sprintf('Middle Upper: %.2f', sensor1_middle_upper));
+    yline(ax3_s1, sensor1_index_lower, '--k', sprintf('Index Lower: %.2f', sensor1_index_lower));
+    yline(ax3_s1, sensor1_index_upper, '--k', sprintf('Index Upper: %.2f', sensor1_index_upper));
+    hold(ax3_s1, 'off');
     
-    % --- Plotting for Sensor 2 ---
-    figure(2);
-    clf;  % Clear figure
-    % Subplot 1: Raw Data
-    subplot(3,1,1);
-    plot(sensor2_history, 'r');
-    title('Sensor 2: Raw Data');
-    xlabel('Sample Number'); ylabel('Amplitude');
+    %% Update Sensor 2 Plots
+    axes(ax1_s2); cla(ax1_s2);
+    plot(ax1_s2, sensor2_history, 'r');
+    title(ax1_s2, 'Sensor 2: Raw Data');
+    xlabel(ax1_s2, 'Sample Number'); ylabel(ax1_s2, 'Amplitude');
     
-    % Subplot 2: Band-Pass Filtered + Absolute Value
-    subplot(3,1,2);
-    plot(sensor2_bp_abs, 'r');
-    title('Sensor 2: Band-Pass + Abs');
-    xlabel('Sample Number'); ylabel('Amplitude');
+    axes(ax2_s2); cla(ax2_s2);
+    plot(ax2_s2, sensor2_bp_abs, 'r');
+    title(ax2_s2, 'Sensor 2: Band-Pass + Abs');
+    xlabel(ax2_s2, 'Sample Number'); ylabel(ax2_s2, 'Amplitude');
     
-    % Subplot 3: Low-Pass Smoothed Envelope with Threshold Lines
-    subplot(3,1,3);
-    plot(sensor2_env, 'r');
-    title('Sensor 2: Low-Pass Smoothed Envelope');
-    xlabel('Sample Number'); ylabel('Amplitude');
-    hold on;
-    yline(sensor2_pinky_lower, '--g', 'Pinky Lower');
-    yline(sensor2_pinky_upper, '--g', 'Pinky Upper');
-    yline(sensor2_ring_lower, '--m', 'Ring Lower');
-    yline(sensor2_ring_upper, '--m', 'Ring Upper');
-    yline(sensor2_middle_lower, '--c', 'Middle Lower');
-    yline(sensor2_middle_upper, '--c', 'Middle Upper');
-    yline(sensor2_index_lower, '--k', 'Index Lower');
-    yline(sensor2_index_upper, '--k', 'Index Upper');
-    hold off;
+    axes(ax3_s2); cla(ax3_s2);
+    plot(ax3_s2, sensor2_env, 'r');
+    title(ax3_s2, 'Sensor 2: Low-Pass Smoothed Envelope');
+    xlabel(ax3_s2, 'Sample Number'); ylabel(ax3_s2, 'Amplitude');
+    hold(ax3_s2, 'on');
+    yline(ax3_s2, sensor2_pinky_lower, '--g', sprintf('Pinky Lower: %.2f', sensor2_pinky_lower));
+    yline(ax3_s2, sensor2_pinky_upper, '--g', sprintf('Pinky Upper: %.2f', sensor2_pinky_upper));
+    yline(ax3_s2, sensor2_ring_lower, '--m', sprintf('Ring Lower: %.2f', sensor2_ring_lower));
+    yline(ax3_s2, sensor2_ring_upper, '--m', sprintf('Ring Upper: %.2f', sensor2_ring_upper));
+    yline(ax3_s2, sensor2_middle_lower, '--c', sprintf('Middle Lower: %.2f', sensor2_middle_lower));
+    yline(ax3_s2, sensor2_middle_upper, '--c', sprintf('Middle Upper: %.2f', sensor2_middle_upper));
+    yline(ax3_s2, sensor2_index_lower, '--k', sprintf('Index Lower: %.2f', sensor2_index_lower));
+    yline(ax3_s2, sensor2_index_upper, '--k', sprintf('Index Upper: %.2f', sensor2_index_upper));
+    hold(ax3_s2, 'off');
     
     drawnow;
-    pause(0.5);  % Adjust pause interval as needed
+    pause(0.5);  % Adjust pause as needed for processing/plot updates
 end
