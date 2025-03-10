@@ -1,3 +1,4 @@
 #ignore all .lic files
 *lic
 .aider*
+*txt
