@@ -1,11 +1,11 @@
 import time
 import serial
 # Set up the serial connection (adjust 'COM10' and baud rate as needed)
-ser = serial.Serial('COM10', 9600, timeout=1)
+ser = serial.Serial('COM6', 9600, timeout=1)
 
 def main():
     # Open the finger output file in read mode and seek to the end
-    with open("finger_output.txt", "r") as f:
+    with open("C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\Medical\\delsys_emg\\matlab\\finger_output.txt", "r") as f:
         f.seek(0, 2)  # Move to the end of file
         sensor1_cmd = 'n'
         sensor2_cmd = 'n'
