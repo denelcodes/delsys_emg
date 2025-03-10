@@ -1,6 +1,7 @@
 % live_plot_separate_thresholds.m
-% This script continuously reads live_data.txt, accumulates sensor data,
-% processes it in three stages, and displays the results in separate figures.
+% This script continuously reads raw_emg_data.txt (written by your Python code),
+% accumulates sensor data, processes it in three stages, and displays the results 
+% in separate figures.
 %
 % Processing stages for each sensor:
 %   1. Raw Live Data
@@ -70,9 +71,10 @@ while true
     fileText = fscanf(fid, '%c');
     fclose(fid);
     
-    % Extract sensor data using regular expressions
-    sensor1_tokens = regexp(fileText, 'Sensor\s*1:\s*\[(.*?)\]', 'tokens');
-    sensor2_tokens = regexp(fileText, 'Sensor\s*2:\s*\[(.*?)\]', 'tokens');
+    % --- Updated Regular Expressions ---
+    % The regex now allows additional text between the sensor number and the colon.
+    sensor1_tokens = regexp(fileText, 'Sensor\s*1.*?:\s*\[(.*?)\]', 'tokens');
+    sensor2_tokens = regexp(fileText, 'Sensor\s*2.*?:\s*\[(.*?)\]', 'tokens');
     
     % Convert tokens to numeric arrays if available
     if ~isempty(sensor1_tokens)
@@ -121,8 +123,7 @@ while true
             fid_out = fopen('finger_output.txt', 'a');
             fprintf(fid_out, 'Sensor1: %s\n', newFinger);
             fclose(fid_out);
-            % Print to console as well
-            disp(['Sensor 1: ' newFinger]);  % This will print the output to the console
+            disp(['Sensor 1: ' newFinger]);  % Print to console
             sensor1_current_finger = newFinger;
         end
  
@@ -152,12 +153,10 @@ while true
             fid_out = fopen('finger_output.txt', 'a');
             fprintf(fid_out, 'Sensor2: %s\n', newFinger2);
             fclose(fid_out);
-            % Print to console as well
-            disp(['Sensor 2: ' newFinger2]);  % This will print the output to the console
+            disp(['Sensor 2: ' newFinger2]);  % Print to console
             sensor2_current_finger = newFinger2;
         end
 
-    
         if currentValue2 < sensor2_pinky_lower
             sensor2_current_finger = '';
         end

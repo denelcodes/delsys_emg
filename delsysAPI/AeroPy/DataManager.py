@@ -4,7 +4,7 @@ Create an instance of this and pass it a reference to the Trigno base for initia
 See CollectDataController.py for a usage example.
 """
 import numpy as np
-
+import time
 
 class DataKernel():
     def __init__(self, trigno_base):
@@ -29,6 +29,7 @@ class DataKernel():
                     sensor_values = sensor_data[0].tolist() if sensor_data else []
                     # Write a line to the file with a label for the sensor and its corresponding data.
                     file.write(f"Sensor {i+1}: {sensor_values}\n")
+                    time.sleep(0.05)  # Introduce a 50ms delay between writing data
             # --- END OF NEW CODE BLOCK ---
 
             # Existing code that processes the data further for internal storage and queueing.
@@ -47,6 +48,7 @@ class DataKernel():
                     print("Exception updating counters:", e)
             except IndexError as e:
                 print("Index error in processing data:", e)
+
 
 
     def processYTData(self, data_queue):
