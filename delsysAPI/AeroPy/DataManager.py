@@ -16,7 +16,6 @@ class DataKernel():
         self.channel1time = []
         self.channel_guids = []
 
-
 #     def processData(self, data_queue):
 #         """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
 #         outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
@@ -52,54 +51,43 @@ class DataKernel():
 #                 print("Index error in processing data:", e)
 
 # import time
-# import numpy as np
+# import numpy as np    def processData(self, data_queue):
+        """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
+        outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
+        if outArr is not None:
+            # --- NEW CODE BLOCK FOR FILE OUTPUT ---
+            with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'a') as file:
+                # Loop through each sensor's data in the output array.
+                for i, sensor_data in enumerate(outArr):
+                    # Convert the first element of sensor_data (assumed to be a numpy array) to a list.
+                    # This conversion ensures the data is in a human-readable format.
+                    sensor_values = sensor_data[0].tolist() if sensor_data else []
+                    # Write a line to the file with a label for the sensor and its corresponding data.
+                    file.write(f"Sensor {i+1}: {sensor_values}\n")
 
-def processData(self, data_queue):
-    """
-    Processes data from the DelsysAPI. Only sensor 1 and sensor 2 data are collected.
-    Data is aggregated over a 50ms window and then written to a text file.
-    """
-    # Start a 50ms collection window
-    start_time = time.time()
-    sensor1_data_collection = []
-    sensor2_data_collection = []
-    
-    # Collect data repeatedly for 50ms
-    while (time.time() - start_time) < 0.05:
-        outArr = self.GetData()  # Retrieve data from the DelsysAPI.
-        # Ensure there are at least two sensors in the output.
-        if outArr is not None and len(outArr) >= 2:
-            # Assuming each sensor's data is stored as a nested array, e.g. sensor_data[0] contains the data array.
-            sensor1_values = outArr[0][0].tolist() if outArr[0] else []
-            sensor2_values = outArr[1][0].tolist() if outArr[1] else []
-            sensor1_data_collection.append(sensor1_values)
-            sensor2_data_collection.append(sensor2_values)
-        # A small sleep can prevent a too-tight loop (adjust as needed)
-        time.sleep(0.001)
-    
-    # Write the 50ms aggregated sensor data to file.
-    with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'a') as file:
-        file.write("Sensor 1 (50ms window): " + str(sensor1_data_collection) + "\n")
-        file.write("Sensor 2 (50ms window): " + str(sensor2_data_collection) + "\n")
-    
-    # If you need to process the data further, for example to add it to a queue,
-    # you can package the 50ms window's data into a dict or list.
-    data_queue.append({
-        "sensor1": sensor1_data_collection,
-        "sensor2": sensor2_data_collection
-    })
-    
-    # If you still need to update internal storage counters, you can do that here as needed.
-    try:
-        # Example: update counters based on the length of one of the sensor collections.
-        self.packetCount += len(sensor1_data_collection)
-        # If each sensor1_value is an array, update sampleCount using its length.
-        if sensor1_data_collection and sensor1_data_collection[0]:
-            self.sampleCount += len(sensor1_data_collection[0])
-    except Exception as e:
-        print("Exception updating counters:", e)
+            # --- END OF NEW CODE BLOCK ---
 
+            # Create a new file to store the next 50ms worth of data
+            with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\next_50ms_data.txt', 'w') as next_file:
+                next_file.write("Sensor 1 (next 50ms window): " + str(outArr[0][0].tolist()) + "\n")
+                next_file.write("Sensor 2 (next 50ms window): " + str(outArr[1][0].tolist()) + "\n")
 
+            # Existing code that processes the data further for internal storage and queueing.
+            for i in range(len(outArr)):
+                self.allcollectiondata[i].extend(outArr[i][0].tolist())
+            try:
+                for i in range(len(outArr[0])):
+                    if np.asarray(outArr[0]).ndim == 1:
+                        data_queue.append(list(np.asarray(outArr, dtype='object')[0]))
+                    else:
+                        data_queue.append(list(np.asarray(outArr, dtype='object')[:, i]))
+                try:
+                    self.packetCount += len(outArr[0])
+                    self.sampleCount += len(outArr[0][0])
+                except Exception as e:
+                    print("Exception updating counters:", e)
+            except IndexError as e:
+                print("Index error in processing data:", e)
 
     def processYTData(self, data_queue):
         """Processes the data from the DelsysAPI and place it in the data_queue argument"""
