@@ -15,66 +15,53 @@ class DataKernel():
         self.allcollectiondata = []
         self.channel1time = []
         self.channel_guids = []
-
-#     def processData(self, data_queue):
-#         """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
-#         outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
-#         if outArr is not None:
-#             # --- NEW CODE BLOCK FOR FILE OUTPUT ---
-#             with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
-#                 # Loop through each sensor's data in the output array.
-#                 for i, sensor_data in enumerate(outArr):
-#                     # Convert the first element of sensor_data (assumed to be a numpy array) to a list.
-#                     # This conversion ensures the data is in a human-readable format.
-                    
-#                     sensor_values = sensor_data[0].tolist() if sensor_data else []
-#                     # Write a line to the file with a label for the sensor and its corresponding data.
-#                     file.write(f"Sensor {i+1}: {sensor_values}\n")
-
-#             # --- END OF NEW CODE BLOCK ---
-
-#             # Existing code that processes the data further for internal storage and queueing.
-#             for i in range(len(outArr)):
-#                 self.allcollectiondata[i].extend(outArr[i][0].tolist())
-#             try:
-#                 for i in range(len(outArr[0])):
-#                     if np.asarray(outArr[0]).ndim == 1:
-#                         data_queue.append(list(np.asarray(outArr, dtype='object')[0]))
-#                     else:
-#                         data_queue.append(list(np.asarray(outArr, dtype='object')[:, i]))
-#                 try:
-#                     self.packetCount += len(outArr[0])
-#                     self.sampleCount += len(outArr[0][0])
-#                 except Exception as e:
-#                     print("Exception updating counters:", e)
-#             except IndexError as e:
-#                 print("Index error in processing data:", e)
-
-# import time
-# import numpy as np    def processData(self, data_queue):
-        """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
-        outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
+        
+    def processData(self, data_queue):
+        """Processes the data from the DelsysAPI, writes sensor data to text files,
+        and places data into the data_queue argument."""
+        
+        outArr = self.GetData()  # Retrieve data from the DelsysAPI.
         if outArr is not None:
-            # --- NEW CODE BLOCK FOR FILE OUTPUT ---
-            with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'a') as file:
-                # Loop through each sensor's data in the output array.
+            # --- CONSTANT FILE OUTPUT ---
+            with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
                 for i, sensor_data in enumerate(outArr):
-                    # Convert the first element of sensor_data (assumed to be a numpy array) to a list.
-                    # This conversion ensures the data is in a human-readable format.
                     sensor_values = sensor_data[0].tolist() if sensor_data else []
-                    # Write a line to the file with a label for the sensor and its corresponding data.
                     file.write(f"Sensor {i+1}: {sensor_values}\n")
+            # --- END OF CONSTANT FILE BLOCK ---
+            
+            # --- ROLLING FILE OUTPUT (in milliseconds) ---
+            rolling_time_window_ms = 10  # For example, 10,000 ms (10 seconds)
+            if not hasattr(self, 'rolling_start_time'):
+                self.rolling_start_time = time.time()
+            current_time = time.time()
+            elapsed_ms = (current_time - self.rolling_start_time) * 1000  # convert to milliseconds
+            mode = 'w' if elapsed_ms >= rolling_time_window_ms else 'a'
+            if mode == 'w':
+                self.rolling_start_time = current_time  # Reset start time for new window
 
-            # --- END OF NEW CODE BLOCK ---
-
-            # Create a new file to store the next 50ms worth of data
-            with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\next_50ms_data.txt', 'w') as next_file:
-                next_file.write("Sensor 1 (next 50ms window): " + str(outArr[0][0].tolist()) + "\n")
-                next_file.write("Sensor 2 (next 50ms window): " + str(outArr[1][0].tolist()) + "\n")
-
-            # Existing code that processes the data further for internal storage and queueing.
+            rolling_file_path = 'C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\rolling_emg_data.txt'
+            with open(rolling_file_path, mode) as rolling_file:
+                for i, sensor_data in enumerate(outArr):
+                    sensor_values = sensor_data[0].tolist() if sensor_data else []
+                    rolling_file.write(f"Sensor {i+1}: {sensor_values}\n")
+            # --- END OF ROLLING FILE BLOCK ---
+            
+            # --- EXISTING DATA PROCESSING FOR INTERNAL STORAGE AND QUEUEING ---
+            # Ensure that self.allcollectiondata is properly initialized.
+            if not hasattr(self, 'allcollectiondata'):
+                self.allcollectiondata = [[] for _ in range(len(outArr))]
+            elif len(self.allcollectiondata) < len(outArr):
+                # Extend self.allcollectiondata to match the length of outArr.
+                self.allcollectiondata.extend([[] for _ in range(len(outArr) - len(self.allcollectiondata))])
+            
+            # Now safely extend each sublist with the new data.
             for i in range(len(outArr)):
-                self.allcollectiondata[i].extend(outArr[i][0].tolist())
+                try:
+                    # Ensure outArr[i] is not empty and contains a numpy array as the first element.
+                    self.allcollectiondata[i].extend(outArr[i][0].tolist())
+                except Exception as e:
+                    print(f"Error processing sensor {i}: {e}")
+            
             try:
                 for i in range(len(outArr[0])):
                     if np.asarray(outArr[0]).ndim == 1:
@@ -88,6 +75,8 @@ class DataKernel():
                     print("Exception updating counters:", e)
             except IndexError as e:
                 print("Index error in processing data:", e)
+            # --- END OF EXISTING PROCESSING ---
+
 
     def processYTData(self, data_queue):
         """Processes the data from the DelsysAPI and place it in the data_queue argument"""
