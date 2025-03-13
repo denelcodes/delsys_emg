@@ -59,10 +59,10 @@ figure(1); % Sensor 1
 figure(2); % Sensor 2
 
 while true
-    % Open the file for reading
+    % --- Read raw_emg_data.txt for the primary data ---
     fid = fopen('raw_emg_data.txt', 'r');
     if fid == -1
-        disp('Cannot open file. Check the filename or file path.');
+        disp('Cannot open raw_emg_data.txt. Check the filename or file path.');
         pause(1);
         continue;
     end
@@ -72,7 +72,6 @@ while true
     fclose(fid);
     
     % --- Updated Regular Expressions ---
-    % The regex now allows additional text between the sensor number and the colon.
     sensor1_tokens = regexp(fileText, 'Sensor\s*1.*?:\s*\[(.*?)\]', 'tokens');
     sensor2_tokens = regexp(fileText, 'Sensor\s*2.*?:\s*\[(.*?)\]', 'tokens');
     
@@ -223,6 +222,45 @@ while true
     yline(sensor2_index_lower, '--k', 'Index Lower');
     yline(sensor2_index_upper, '--k', 'Index Upper');
     hold off;
+    
+    % --- Plotting for Rolling Data ---
+    % Read the rolling data file (rolling_emg_data.txt)
+    fid_roll = fopen('rolling_emg_data.txt', 'r');
+    if fid_roll ~= -1
+        fileTextRolling = fscanf(fid_roll, '%c');
+        fclose(fid_roll);
+        
+        % Extract rolling data for Sensor 1 and Sensor 2 using regex
+        sensor1_roll_tokens = regexp(fileTextRolling, 'Sensor\s*1.*?:\s*\[(.*?)\]', 'tokens');
+        sensor2_roll_tokens = regexp(fileTextRolling, 'Sensor\s*2.*?:\s*\[(.*?)\]', 'tokens');
+        
+        if ~isempty(sensor1_roll_tokens)
+            sensor1_roll_data = str2num(sensor1_roll_tokens{1}{1});  %#ok<ST2NM>
+        else
+            sensor1_roll_data = [];
+        end
+        
+        if ~isempty(sensor2_roll_tokens)
+            sensor2_roll_data = str2num(sensor2_roll_tokens{1}{1});  %#ok<ST2NM>
+        else
+            sensor2_roll_data = [];
+        end
+        
+        % Plot rolling data in Figure 3 with two subplots
+        figure(3);
+        clf;
+        subplot(2,1,1);
+        plot(sensor1_roll_data, 'b');
+        title('Sensor 1: Rolling Data');
+        xlabel('Sample Number'); ylabel('Amplitude');
+        
+        subplot(2,1,2);
+        plot(sensor2_roll_data, 'r');
+        title('Sensor 2: Rolling Data');
+        xlabel('Sample Number'); ylabel('Amplitude');
+    else
+        disp('Cannot open rolling_emg_data.txt. Check the file path.');
+    end
     
     drawnow;
     pause(0.5);  % Adjust pause interval as needed
