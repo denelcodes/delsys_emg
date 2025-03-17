@@ -13,38 +13,38 @@
 
 %% Threshold Variables (adjust as needed)
 % Sensor 1 thresholds
-sensor1_pinky_lower  = 0.01;
-sensor1_pinky_upper  = 0.02;
-sensor1_ring_lower   = 0.02;
-sensor1_ring_upper   = 0.03;
-sensor1_middle_lower = 0.03;
-sensor1_middle_upper = 0.04;
-sensor1_index_lower  = 0.04;
-sensor1_index_upper  = 0.05;
+sensor1_pinky_lower  = 0.002264329;
+sensor1_pinky_upper  = 0.004432841;
+sensor1_ring_lower   = 0.002664693;
+sensor1_ring_upper   = 0.007166327;
+sensor1_middle_lower = 0.002375097;
+sensor1_middle_upper = 0.007241913;
+sensor1_index_lower  = 0.004213576;
+sensor1_index_upper  = 0.005482864;
 
 % Sensor 2 thresholds
-sensor2_pinky_lower  = 0.01;
-sensor2_pinky_upper  = 0.02;
-sensor2_ring_lower   = 0.02;
-sensor2_ring_upper   = 0.03;
-sensor2_middle_lower = 0.03;
-sensor2_middle_upper = 0.04;
-sensor2_index_lower  = 0.04;
-sensor2_index_upper  = 0.05;
+sensor2_pinky_lower  = 0.008331226;
+sensor2_pinky_upper  = 0.010205404;
+sensor2_ring_lower   = 0.003733016;
+sensor2_ring_upper   = 0.004955364;
+sensor2_middle_lower = 0.004097787;
+sensor2_middle_upper = 0.005650073;
+sensor2_index_lower  = 0.009820486;
+sensor2_index_upper  = 0.011985614;
 
 %% Filter Design Parameters
-fs = 1000;  % Sampling frequency in Hz
+Fs = 1000;  % Sampling frequency in Hz
 
 % Butterworth band-pass filter (e.g., 20-450 Hz for EMG)
-order_bp = 4;
+order_bp = 2;
 low_cutoff = 20;   % Hz
 high_cutoff = 450; % Hz
-[b_bp, a_bp] = butter(order_bp, [low_cutoff high_cutoff] / (fs/2));
+[b_bp, a_bp] = butter(order_bp, [low_cutoff high_cutoff] / (Fs/2));
 
 % Butterworth low-pass filter for envelope smoothing (e.g., 4 Hz cutoff)
-order_lp = 4;
+order_lp = 2;
 lp_cutoff = 4;   % Hz
-[b_lp, a_lp] = butter(order_lp, lp_cutoff / (fs/2));
+[b_lp, a_lp] = butter(order_lp, lp_cutoff / (Fs/2));
 
 %% Initialize History Arrays
 sensor1_history = [];
@@ -59,10 +59,10 @@ figure(1); % Sensor 1
 figure(2); % Sensor 2
 
 while true
-    % --- Read raw_emg_data.txt for the primary data ---
+    % Open the file for reading
     fid = fopen('raw_emg_data.txt', 'r');
     if fid == -1
-        disp('Cannot open raw_emg_data.txt. Check the filename or file path.');
+        disp('Cannot open file. Check the filename or file path.');
         pause(1);
         continue;
     end
@@ -72,6 +72,7 @@ while true
     fclose(fid);
     
     % --- Updated Regular Expressions ---
+    % The regex now allows additional text between the sensor number and the colon.
     sensor1_tokens = regexp(fileText, 'Sensor\s*1.*?:\s*\[(.*?)\]', 'tokens');
     sensor2_tokens = regexp(fileText, 'Sensor\s*2.*?:\s*\[(.*?)\]', 'tokens');
     
@@ -100,7 +101,29 @@ while true
     % Stage 3: Low-Pass Filter for envelope smoothing
     sensor1_env = filter(b_lp, a_lp, sensor1_bp_abs);
     sensor2_env = filter(b_lp, a_lp, sensor2_bp_abs);
+
+    % Stage 4: Averaging
+    averaging1 = size(sensor1_env);
+    averaging2 = size(sensor2_env);
+
+    for i = 1:floor(length(sensor1_env))/4:length(sensor1_env)
+        idx = i:min(i+floor(length(sensor1_env))-1, length(sensor1_env)); % Get indices for the current group
+        avgValue = mean(sensor1_env(idx)); % Compute the mean of the  values
+        averaging1(idx) = avgValue; % Assign the mean to all  positions
+    end
+
+    for i = 1:floor(length(sensor2_env))/4:length(sensor2_env)
+        idx = i:min(i+floor(length(sensor2_env))-1, length(sensor2_env)); % Get indices for the current group
+        avgValue = mean(sensor2_env(idx)); % Compute the mean of the values
+        averaging2(idx) = avgValue; % Assign the mean to all positions
+    end
     
+    % Stage 5: Low pass filter again
+    cutoffFreq2 = 3;       % Cutoff frequency in Hz (adjust as needed)
+    [b2,a2] = butter(2, cutoffFreq2/(Fs/2));
+    sensor1_env = filtfilt(b2, a2, averaging1);
+    sensor2_env = filtfilt(b2, a2, averaging2);
+
     % --- Check for Sensor 1 Threshold Crossing ---
     if ~isempty(sensor1_env)
         currentValue = sensor1_env(end);  % Latest envelope value for Sensor 1
@@ -223,45 +246,7 @@ while true
     yline(sensor2_index_upper, '--k', 'Index Upper');
     hold off;
     
-    % --- Plotting for Rolling Data ---
-    % Read the rolling data file (rolling_emg_data.txt)
-    fid_roll = fopen('rolling_emg_data.txt', 'r');
-    if fid_roll ~= -1
-        fileTextRolling = fscanf(fid_roll, '%c');
-        fclose(fid_roll);
-        
-        % Extract rolling data for Sensor 1 and Sensor 2 using regex
-        sensor1_roll_tokens = regexp(fileTextRolling, 'Sensor\s*1.*?:\s*\[(.*?)\]', 'tokens');
-        sensor2_roll_tokens = regexp(fileTextRolling, 'Sensor\s*2.*?:\s*\[(.*?)\]', 'tokens');
-        
-        if ~isempty(sensor1_roll_tokens)
-            sensor1_roll_data = str2num(sensor1_roll_tokens{1}{1});  %#ok<ST2NM>
-        else
-            sensor1_roll_data = [];
-        end
-        
-        if ~isempty(sensor2_roll_tokens)
-            sensor2_roll_data = str2num(sensor2_roll_tokens{1}{1});  %#ok<ST2NM>
-        else
-            sensor2_roll_data = [];
-        end
-        
-        % Plot rolling data in Figure 3 with two subplots
-        figure(3);
-        clf;
-        subplot(2,1,1);
-        plot(sensor1_roll_data, 'b');
-        title('Sensor 1: Rolling Data');
-        xlabel('Sample Number'); ylabel('Amplitude');
-        
-        subplot(2,1,2);
-        plot(sensor2_roll_data, 'r');
-        title('Sensor 2: Rolling Data');
-        xlabel('Sample Number'); ylabel('Amplitude');
-    else
-        disp('Cannot open rolling_emg_data.txt. Check the file path.');
-    end
-    
     drawnow;
     pause(0.5);  % Adjust pause interval as needed
 end
+

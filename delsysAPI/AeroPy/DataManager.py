@@ -16,66 +16,72 @@ class DataKernel():
         self.channel1time = []
         self.channel_guids = []
         
-    def processData(self, data_queue):
-        """Processes the data from the DelsysAPI, writes sensor data to text files,
-        and places data into the data_queue argument."""
+    # def processData(self, data_queue):
+    #     """Processes the data from the DelsysAPI, writes sensor data to text files,
+    #     and places data into the data_queue argument."""
         
-        outArr = self.GetData()  # Retrieve data from the DelsysAPI.
-        if outArr is not None:
-            # --- CONSTANT FILE OUTPUT ---
-            with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
-                for i, sensor_data in enumerate(outArr):
-                    sensor_values = sensor_data[0].tolist() if sensor_data else []
-                    file.write(f"Sensor {i+1}: {sensor_values}\n")
-            # --- END OF CONSTANT FILE BLOCK ---
+    #     outArr = self.GetData()  # Retrieve data from the DelsysAPI.
+    #     if outArr is not None:
+    #         # --- CONSTANT FILE OUTPUT ---
+    #         with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
+    #             for i, sensor_data in enumerate(outArr):
+    #                 sensor_values = sensor_data[0].tolist() if sensor_data else []
+    #                 if sensor_values == []:
+    #                     continue
+    #                 file.write(f"Sensor {i+1}: {sensor_values}\n")
+    #         # --- END OF CONSTANT FILE BLOCK ---
             
-            # --- ROLLING FILE OUTPUT (in milliseconds) ---
-            rolling_time_window_ms = 10  # For example, 10,000 ms (10 seconds)
-            if not hasattr(self, 'rolling_start_time'):
-                self.rolling_start_time = time.time()
-            current_time = time.time()
-            elapsed_ms = (current_time - self.rolling_start_time) * 1000  # convert to milliseconds
-            mode = 'w' if elapsed_ms >= rolling_time_window_ms else 'a'
-            if mode == 'w':
-                self.rolling_start_time = current_time  # Reset start time for new window
+    #         # --- ROLLING FILE OUTPUT (ALWAYS APPEND MODE) ---
+    #         rolling_time_window_ms = 1000  # Time window in milliseconds (used only for resetting the timer)
+    #         if not hasattr(self, 'rolling_start_time'):
+    #             self.rolling_start_time = time.time()
+    #         current_time = time.time()
+    #         elapsed_ms = (current_time - self.rolling_start_time) * 1000  # convert to milliseconds
 
-            rolling_file_path = 'C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\rolling_emg_data.txt'
-            with open(rolling_file_path, mode) as rolling_file:
-                for i, sensor_data in enumerate(outArr):
-                    sensor_values = sensor_data[0].tolist() if sensor_data else []
-                    rolling_file.write(f"Sensor {i+1}: {sensor_values}\n")
-            # --- END OF ROLLING FILE BLOCK ---
+    #         # Always use append mode ('a') so that new data is added without overwriting old data.
+    #         mode = 'a'
+
+    #         # Optionally reset the internal timer after the time window, if you use it elsewhere.
+    #         if elapsed_ms >= rolling_time_window_ms:
+    #             self.rolling_start_time = current_time
+
+    #         rolling_file_path = 'C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\rolling_emg_data.txt'
+    #         with open(rolling_file_path, mode) as rolling_file:
+    #             for i, sensor_data in enumerate(outArr):
+    #                 sensor_values = sensor_data[0].tolist() if sensor_data else []
+    #                 rolling_file.write(f"Sensor {i+1}: {sensor_values}\n")
+    #         # --- END OF ROLLING FILE BLOCK ---
             
-            # --- EXISTING DATA PROCESSING FOR INTERNAL STORAGE AND QUEUEING ---
-            # Ensure that self.allcollectiondata is properly initialized.
-            if not hasattr(self, 'allcollectiondata'):
-                self.allcollectiondata = [[] for _ in range(len(outArr))]
-            elif len(self.allcollectiondata) < len(outArr):
-                # Extend self.allcollectiondata to match the length of outArr.
-                self.allcollectiondata.extend([[] for _ in range(len(outArr) - len(self.allcollectiondata))])
+    #         # --- EXISTING DATA PROCESSING FOR INTERNAL STORAGE AND QUEUEING ---
+    #         # Ensure that self.allcollectiondata is properly initialized.
+    #         if not hasattr(self, 'allcollectiondata'):
+    #             self.allcollectiondata = [[] for _ in range(len(outArr))]
+    #         elif len(self.allcollectiondata) < len(outArr):
+    #             # Extend self.allcollectiondata to match the length of outArr.
+    #             self.allcollectiondata.extend([[] for _ in range(len(outArr) - len(self.allcollectiondata))])
             
-            # Now safely extend each sublist with the new data.
-            for i in range(len(outArr)):
-                try:
-                    # Ensure outArr[i] is not empty and contains a numpy array as the first element.
-                    self.allcollectiondata[i].extend(outArr[i][0].tolist())
-                except Exception as e:
-                    print(f"Error processing sensor {i}: {e}")
+    #         # Now safely extend each sublist with the new data.
+    #         for i in range(len(outArr)):
+    #             try:
+    #                 # Ensure outArr[i] is not empty and contains a numpy array as the first element.
+    #                 self.allcollectiondata[i].extend(outArr[i][0].tolist())
+    #             except Exception as e:
+    #                 print(f"Error processing sensor {i}: {e}")
             
-            try:
-                for i in range(len(outArr[0])):
-                    if np.asarray(outArr[0]).ndim == 1:
-                        data_queue.append(list(np.asarray(outArr, dtype='object')[0]))
-                    else:
-                        data_queue.append(list(np.asarray(outArr, dtype='object')[:, i]))
-                try:
-                    self.packetCount += len(outArr[0])
-                    self.sampleCount += len(outArr[0][0])
-                except Exception as e:
-                    print("Exception updating counters:", e)
-            except IndexError as e:
-                print("Index error in processing data:", e)
-            # --- END OF EXISTING PROCESSING ---
+    #         try:
+    #             for i in range(len(outArr[0])):
+    #                 if np.asarray(outArr[0]).ndim == 1:
+    #                     data_queue.append(list(np.asarray(outArr, dtype='object')[0]))
+    #                 else:
+    #                     data_queue.append(list(np.asarray(outArr, dtype='object')[:, i]))
+    #             try:
+    #                 self.packetCount += len(outArr[0])
+    #                 self.sampleCount += len(outArr[0][0])
+    #             except Exception as e:
+    #                 print("Exception updating counters:", e)
+    #         except IndexError as e:
+    #             print("Index error in processing data:", e)
+    #         # --- END OF EXISTING PROCESSING ---
 
 
     def processYTData(self, data_queue):

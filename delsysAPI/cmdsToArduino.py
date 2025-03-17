@@ -1,11 +1,11 @@
 import time
 import serial
 # Set up the serial connection (adjust 'COM10' and baud rate as needed)
-ser = serial.Serial('COM6', 9600, timeout=1)
+ser = serial.Serial('COM8', 9600, timeout=1)
 
 def main():
     # Open the finger output file in read mode and seek to the end
-    with open("C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\finger_output.txt", "r") as f:
+    with open("C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\finger_output.txt", "r") as f:
         f.seek(0, 2)  # Move to the end of file
         sensor1_cmd = 'n'
         sensor2_cmd = 'n'
@@ -28,11 +28,11 @@ def main():
                     time.sleep(0.1)  # Small delay to avoid busy-waiting
 
             #if both sensor give the same finger cmd only then move the finger
-            if sensor1_cmd == sensor2_cmd:
-                # Prepare combined message. Even if no new command, 'n' is sent.
-                message = f"S1:{sensor1_cmd};S2:{sensor2_cmd}\n"
-                print("Sending:", message.strip())
-                ser.write(message.encode('utf-8'))
+         #   if sensor1_cmd == sensor2_cmd:
+            # Prepare combined message. Even if no new command, 'n' is sent.
+            message = f"S1:{sensor1_cmd};S2:{sensor2_cmd}\n"
+            print("Sending:", message.strip())
+            ser.write(message.encode('utf-8'))
             
             # Reset commands for next cycle
             sensor1_cmd = 'n'
