@@ -23,13 +23,13 @@ class DataKernel():
         # check if outArr contian data
         if outArr is not None:
             
-            # with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
-            #     # Loop through each sensor's data in the output array.
-            #     for i, sensor_data in enumerate(outArr):
-            #         # Convert the first element of sensor_data (assumed to be a numpy array) to a list
-            #         sensor_values = sensor_data[0].tolist() if sensor_data else []
-            #         # Write a line to the file with a label for the sensor and its corresponding data
-            #         file.write(f"Sensor {i+1}: {sensor_values}\n")
+            with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
+                # Loop through each sensor's data in the output array.
+                for i, sensor_data in enumerate(outArr):
+                    # Convert the first element of sensor_data (assumed to be a numpy array) to a list
+                    sensor_values = sensor_data[0].tolist() if sensor_data else []
+                    # Write a line to the file with a label for the sensor and its corresponding data
+                    file.write(f"Sensor {i+1}: {sensor_values}\n")
 
             # orginal code that processes the data further for internal storage + queueing
             for i in range(len(outArr)):
