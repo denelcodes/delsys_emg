@@ -19,19 +19,19 @@ class DataKernel():
     def processData(self, data_queue):
         """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
         outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
+        
+        # check if outArr contian data
         if outArr is not None:
-            # --- NEW CODE BLOCK FOR FILE OUTPUT ---
-            with open('C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
-                # Loop through each sensor's data in the output array.
-                for i, sensor_data in enumerate(outArr):
-                    # Convert the first element of sensor_data (assumed to be a numpy array) to a list.
-                    # This conversion ensures the data is in a human-readable format.
-                    sensor_values = sensor_data[0].tolist() if sensor_data else []
-                    # Write a line to the file with a label for the sensor and its corresponding data.
-                    file.write(f"Sensor {i+1}: {sensor_values}\n")
-            # --- END OF NEW CODE BLOCK ---
+            
+            # with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
+            #     # Loop through each sensor's data in the output array.
+            #     for i, sensor_data in enumerate(outArr):
+            #         # Convert the first element of sensor_data (assumed to be a numpy array) to a list
+            #         sensor_values = sensor_data[0].tolist() if sensor_data else []
+            #         # Write a line to the file with a label for the sensor and its corresponding data
+            #         file.write(f"Sensor {i+1}: {sensor_values}\n")
 
-            # Existing code that processes the data further for internal storage and queueing.
+            # orginal code that processes the data further for internal storage + queueing
             for i in range(len(outArr)):
                 self.allcollectiondata[i].extend(outArr[i][0].tolist())
             try:
@@ -47,7 +47,6 @@ class DataKernel():
                     print("Exception updating counters:", e)
             except IndexError as e:
                 print("Index error in processing data:", e)
-
 
     def processYTData(self, data_queue):
         """Processes the data from the DelsysAPI and place it in the data_queue argument"""

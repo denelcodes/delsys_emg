@@ -1,6 +1,7 @@
 % live_plot_separate_thresholds.m
-% This script continuously reads live_data.txt, accumulates sensor data,
-% processes it in three stages, and displays the results in separate figures.
+% This script continuously reads raw_emg_data.txt (written by your Python code),
+% accumulates sensor data, processes it in three stages, and displays the results 
+% in separate figures.
 %
 % Processing stages for each sensor:
 %   1. Raw Live Data
@@ -12,37 +13,37 @@
 
 %% Threshold Variables (adjust as needed)
 % Sensor 1 thresholds
-sensor1_pinky_lower  = 0.01;
-sensor1_pinky_upper  = 0.02;
-sensor1_ring_lower   = 0.02;
-sensor1_ring_upper   = 0.03;
-sensor1_middle_lower = 0.03;
-sensor1_middle_upper = 0.04;
-sensor1_index_lower  = 0.04;
-sensor1_index_upper  = 0.05;
+sensor1_pinky_lower  = 0.002264329;
+sensor1_pinky_upper  = 0.004432841;
+sensor1_ring_lower   = 0.002664693;
+sensor1_ring_upper   = 0.007166327;
+sensor1_middle_lower = 0.002375097;
+sensor1_middle_upper = 0.007241913;
+sensor1_index_lower  = 0.004213576;
+sensor1_index_upper  = 0.005482864;
 
 % Sensor 2 thresholds
-sensor2_pinky_lower  = 0.01;
-sensor2_pinky_upper  = 0.02;
-sensor2_ring_lower   = 0.02;
-sensor2_ring_upper   = 0.03;
-sensor2_middle_lower = 0.03;
-sensor2_middle_upper = 0.04;
-sensor2_index_lower  = 0.04;
-sensor2_index_upper  = 0.05;
+sensor2_pinky_lower  = 0.008331226;
+sensor2_pinky_upper  = 0.010205404;
+sensor2_ring_lower   = 0.003733016;
+sensor2_ring_upper   = 0.004955364;
+sensor2_middle_lower = 0.004097787;
+sensor2_middle_upper = 0.005650073;
+sensor2_index_lower  = 0.009820486;
+sensor2_index_upper  = 0.011985614;
 
 %% Filter Design Parameters
-fs = 1000;  % Sampling frequency in Hz
+fs = 2148.148;  % Sampling frequency in Hz
 
 % Butterworth band-pass filter (e.g., 20-450 Hz for EMG)
-order_bp = 4;
-low_cutoff = 20;   % Hz
-high_cutoff = 450; % Hz
+order_bp = 2;
+low_cutoff = 100;   % Hz
+high_cutoff = 200; % Hz
 [b_bp, a_bp] = butter(order_bp, [low_cutoff high_cutoff] / (fs/2));
 
 % Butterworth low-pass filter for envelope smoothing (e.g., 4 Hz cutoff)
-order_lp = 4;
-lp_cutoff = 4;   % Hz
+order_lp = 2;
+lp_cutoff = 10;   % Hz
 [b_lp, a_lp] = butter(order_lp, lp_cutoff / (fs/2));
 
 %% Initialize History Arrays
@@ -70,9 +71,10 @@ while true
     fileText = fscanf(fid, '%c');
     fclose(fid);
     
-    % Extract sensor data using regular expressions
-    sensor1_tokens = regexp(fileText, 'Sensor\s*1:\s*\[(.*?)\]', 'tokens');
-    sensor2_tokens = regexp(fileText, 'Sensor\s*2:\s*\[(.*?)\]', 'tokens');
+    % --- Updated Regular Expressions ---
+    % The regex now allows additional text between the sensor number and the colon.
+    sensor1_tokens = regexp(fileText, 'Sensor\s*1.*?:\s*\[(.*?)\]', 'tokens');
+    sensor2_tokens = regexp(fileText, 'Sensor\s*2.*?:\s*\[(.*?)\]', 'tokens');
     
     % Convert tokens to numeric arrays if available
     if ~isempty(sensor1_tokens)
@@ -99,7 +101,23 @@ while true
     % Stage 3: Low-Pass Filter for envelope smoothing
     sensor1_env = filter(b_lp, a_lp, sensor1_bp_abs);
     sensor2_env = filter(b_lp, a_lp, sensor2_bp_abs);
-    
+
+    % Stage 4: Averaging
+    averaging1 = size(sensor1_env);
+    averaging2 = size(sensor2_env);
+    for i = 1:length(sensor1_env)
+        averaging1 = smoothdata(sensor1_env, 'movmean', 10);
+    end
+    for i = 1:length(sensor2_env)
+        averaging2 = movmean(sensor2_env, 1);
+    end
+
+    % Stage 5: Low pass filter again
+    cutoffFreq2 = 3;       % Cutoff frequency in Hz (adjust as needed)
+    [b2,a2] = butter(2, cutoffFreq2/(Fs/2));
+    sensor1_env = filtfilt(b2, a2, averaging1);
+    sensor2_env = filtfilt(b2, a2, averaging2);
+
     % --- Check for Sensor 1 Threshold Crossing ---
     if ~isempty(sensor1_env)
         currentValue = sensor1_env(end);  % Latest envelope value for Sensor 1
@@ -121,8 +139,7 @@ while true
             fid_out = fopen('finger_output.txt', 'a');
             fprintf(fid_out, 'Sensor1: %s\n', newFinger);
             fclose(fid_out);
-            % Print to console as well
-            disp(['Sensor 1: ' newFinger]);  % This will print the output to the console
+            disp(['Sensor 1: ' newFinger]);  % Print to console
             sensor1_current_finger = newFinger;
         end
  
@@ -152,12 +169,10 @@ while true
             fid_out = fopen('finger_output.txt', 'a');
             fprintf(fid_out, 'Sensor2: %s\n', newFinger2);
             fclose(fid_out);
-            % Print to console as well
-            disp(['Sensor 2: ' newFinger2]);  % This will print the output to the console
+            disp(['Sensor 2: ' newFinger2]);  % Print to console
             sensor2_current_finger = newFinger2;
         end
 
-    
         if currentValue2 < sensor2_pinky_lower
             sensor2_current_finger = '';
         end
@@ -228,3 +243,4 @@ while true
     drawnow;
     pause(0.5);  % Adjust pause interval as needed
 end
+
