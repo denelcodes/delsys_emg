@@ -4,3 +4,14 @@
 *txt
 matlab/raw_emg_data.txt
 matlab/finger_output.txt
+matlab/update_plot.m
+delsysAPI/AeroPy/__pycache__/DataManager.cpython-311.pyc
+delsysAPI/AeroPy/__pycache__/TrignoBase.cpython-311.pyc
+delsysAPI/DataCollector/__pycache__/CollectDataController.cpython-311.pyc
+delsysAPI/DataCollector/__pycache__/CollectDataWindow.cpython-311.pyc
+delsysAPI/DataCollector/__pycache__/CollectionMetricsManagement.cpython-311.pyc
+.gitignore
+delsysAPI/Plotter/__pycache__/GenericPlot.cpython-311.pyc
+delsysAPI/Export/__pycache__/CsvWriter.cpython-311.pyc
+delsysAPI/StartMenu/__pycache__/StartWindow.cpython-311.pyc
+delsysAPI/UIControls/__pycache__/LandingScreenController.cpython-311.pyc
