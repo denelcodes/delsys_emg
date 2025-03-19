@@ -4,7 +4,7 @@ Create an instance of this and pass it a reference to the Trigno base for initia
 See CollectDataController.py for a usage example.
 """
 import numpy as np
-
+import matlab.engine
 
 class DataKernel():
     def __init__(self, trigno_base):
@@ -15,33 +15,82 @@ class DataKernel():
         self.allcollectiondata = []
         self.channel1time = []
         self.channel_guids = []
+        
+        # Start MATLAB engine
+        self.eng = matlab.engine.start_matlab()
+
+        # (Optional) if you need to add the folder that contains 'update_plot.m' to the MATLAB path
+        # self.eng.addpath(r'C:\path\to\folder\with\update_plot')
+
+        # Example: set up filter parameters in Python if needed,
+        # or you can keep everything in MATLAB.
+
+        # Initialize local sensor histories
+        self.sensor1_history = []
+        self.sensor2_history = []
 
     def processData(self, data_queue):
         """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
-        outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
+        # Retrieve data from the DelsysAPI via the GetData method
+        # call GetData() to retrieve new data
+        # outArr will be a list of lists where each inner list corresponds to one sensor's data.
+        outArr = self.GetData()  
         
-        # check if outArr contian data
+        # check if outArr contian data Only process if new data is available
         if outArr is not None:
             
-            with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
-                # Loop through each sensor's data in the output array.
-                for i, sensor_data in enumerate(outArr):
-                    # Convert the first element of sensor_data (assumed to be a numpy array) to a list
-                    sensor_values = sensor_data[0].tolist() if sensor_data else []
-                    # Write a line to the file with a label for the sensor and its corresponding data
-                    file.write(f"Sensor {i+1}: {sensor_values}\n")
+            # extract the new samples for each sensor
+            sensor1_new = []
+            sensor2_new = []
 
-            # orginal code that processes the data further for internal storage + queueing
+            #  outArr[0] is sensor1, outArr[1] is sensor2, etc
+            if len(outArr) > 0 and len(outArr[0]) > 0:
+                sensor1_new = outArr[0][0].tolist()
+            if len(outArr) > 1 and len(outArr[1]) > 0:
+                sensor2_new = outArr[1][0].tolist()
+
+            # Append these new samples to our local histories
+            self.sensor1_history.extend(sensor1_new)
+            self.sensor2_history.extend(sensor2_new)
+
+            # -----------------------------------------------------------
+            #  call into MATLAB to process & plot everything
+            # Pass the entire history each time
+            # We need to convert Python lists to MATLAB arrays, e.g. matlab.double()
+            # If your data is large, you may want a more optimized approach.
+            # -----------------------------------------------------------
+            self.eng.update_plot(
+                matlab.double(self.sensor1_history),
+                matlab.double(self.sensor2_history),
+                nargout=0  # no output expected
+            )
+
+
+        #-------- orginal code that processes the data further for internal storage + queueing
+
+            # For each sensor extend its existing data collection with the new data
+            # for i in range(len(outArr)) goes through each index i corresponding to a sensor If outArr has data for 2 sensors, i will be 0, 1,
             for i in range(len(outArr)):
-                self.allcollectiondata[i].extend(outArr[i][0].tolist())
+                # Convert the sensor data (assumed to be in the first element of each sublist) to a list 
+                # and append it to the corresponding sensor's stored data in allcollectiondata
+                self.allcollectiondata[i].extend(outArr[i][0].tolist()) # self.allcollectiondata[i]  is the list that holds all previously collected data for the sensor at index i
             try:
+                #iterates over each packet in the first sensor’s data 
+                # Since all sensors are expected to have the same number of packets
+                # this loop also corresponds to the packets in the other sensors.
                 for i in range(len(outArr[0])):
+                    # It checks if the data for the first sensor is one-dimensional.
+                    #If 1D then it means there's only one packet of data, and  code handles it in a straightforward way.
                     if np.asarray(outArr[0]).ndim == 1:
+                        # This takes the first sensor's data and appends it to the queue as a list.
                         data_queue.append(list(np.asarray(outArr, dtype='object')[0]))
                     else:
+                        #This extracts the ith data packet from each sensor 
                         data_queue.append(list(np.asarray(outArr, dtype='object')[:, i]))
                 try:
+                     # Update the packet counter by adding the number of packets from sensor 0.
                     self.packetCount += len(outArr[0])
+                    # Update the sample counter by adding the number of samples in the first packet of sensor 0.
                     self.sampleCount += len(outArr[0][0])
                 except Exception as e:
                     print("Exception updating counters:", e)
