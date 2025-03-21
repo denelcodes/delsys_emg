@@ -12,6 +12,11 @@ const int pinRing = 4;
 const int pinMiddle = 3;
 const int pinIndex = 2;
 
+// Define servo positions and movement delay
+const int openPos = 110;
+const int closedPos = 10;
+const int moveDelay = 300;  // milliseconds
+
 void setup() {
   Serial.begin(9600);
   
@@ -20,23 +25,24 @@ void setup() {
   servoMiddle.attach(pinMiddle);
   servoIndex.attach(pinIndex);
   
-  // Initialize all servos to open position (110 degrees)
-  servoPinky.write(110);
-  servoRing.write(110);
-  servoMiddle.write(110);
-  servoIndex.write(110);
+  // intalize  all servos to open position
+  servoPinky.write(openPos);
+  servoRing.write(openPos);
+  servoMiddle.write(openPos);
+  servoIndex.write(openPos);
 }
 
 void loop() {
   if (Serial.available() > 0) {
-    // Read the entire line until newline
+    // Read a command from the serial port until newline
     String input = Serial.readStringUntil('\n');
     input.trim();
     
-    // Iterate over each character in the input string
-    for (int i = 0; i < input.length(); i++) {
-      char finger = input.charAt(i);
-      // Only process if it's a valid command: p, r, m, or i
+    if (input.length() > 0) {
+      // Use only the first character as the command
+      char finger = input.charAt(0);
+      
+      // Process only valid commands: 'p', 'r', 'm', or 'i'
       if (finger == 'p' || finger == 'r' || finger == 'm' || finger == 'i') {
         actuateFinger(finger);
       }
@@ -45,22 +51,21 @@ void loop() {
 }
 
 void actuateFinger(char finger) {
-  Servo* servo1 = nullptr;
-  int delay1 = 300;
+  Servo* targetServo = nullptr;
   
   switch(finger) {
-    case 'p': servo1 = &servoPinky; break;
-    case 'r': servo1 = &servoRing; break;
-    case 'm': servo1 = &servoMiddle; break;
-    case 'i': servo1 = &servoIndex; break;
-    default: return; // unknown command; do nothing
+    case 'p': targetServo = &servoPinky; break;
+    case 'r': targetServo = &servoRing; break;
+    case 'm': targetServo = &servoMiddle; break;
+    case 'i': targetServo = &servoIndex; break;
+    default: return; // Unknown command; do nothing
   }
   
-  if (servo1 != nullptr) {
-    // Actuate  open 110 to closed 10 degre and then back to open 110
-    servo1->write(10);
-    delay(delay1);  // aadjust delay as needed for the movement
-    servo1->write(110);
-    delay(delay1);
+  if (targetServo != nullptr) {
+    // Actuate the servo: move from open to closed, then back to open
+    targetServo->write(closedPos);
+    delay(moveDelay);
+    targetServo->write(openPos);
+    delay(moveDelay);
   }
 }
