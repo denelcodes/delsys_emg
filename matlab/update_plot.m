@@ -1,4 +1,16 @@
-function update_plot(sensor1_new, sensor2_new)
+function update_plot(sensor1_new, sensor2_new, pauseFlag)
+
+    %needs to be tested
+    if nargin < 3
+        pauseFlag = false;
+    end
+
+    if pauseFlag
+        disp('Plot update paused.');
+        return;
+    end
+
+
     % Persistent variables store cumulative data and handles
     persistent hFig1 hFig2 hLine1 hLine2 sensor1_data sensor2_data
     if isempty(sensor1_data)
@@ -144,11 +156,14 @@ function check_threshold_generic(sensor_data, sensorLabel, thresholds)
     end
 end
 
-% This function can be called from Python to retrieve the current commands.
-function [sensor1_cmd, sensor2_cmd] = get_finger_command()
+
+% --- New function that combines sensor states into one command string ---
+function combined_cmd = get_combined_finger_command()
+    % This function is intended to be called from Python via the MATLAB Engine API.
+    % It returns a string with four comma-separated tokens representing:
+    % [pinky, ring, middle, index]
     persistent sensorStates
     if isempty(sensorStates)
-        % If sensorStates has not been set up, initialize to empty commands.
         sensorStates = struct('Sensor1','', 'Sensor2','');
     else
         if ~isfield(sensorStates, 'Sensor1')
@@ -158,6 +173,30 @@ function [sensor1_cmd, sensor2_cmd] = get_finger_command()
             sensorStates.Sensor2 = '';
         end
     end
+
     sensor1_cmd = sensorStates.Sensor1;
     sensor2_cmd = sensorStates.Sensor2;
+    
+    % For each finger, if either sensor indicates that finger, mark it active.
+    pinky  = '';
+    ring   = '';
+    middle = '';
+    index  = '';
+    
+    if strcmp(sensor1_cmd, 'p') || strcmp(sensor2_cmd, 'p')
+        pinky = 'p';
+    end
+    if strcmp(sensor1_cmd, 'r') || strcmp(sensor2_cmd, 'r')
+        ring = 'r';
+    end
+    if strcmp(sensor1_cmd, 'm') || strcmp(sensor2_cmd, 'm')
+        middle = 'm';
+    end
+    if strcmp(sensor1_cmd, 'i') || strcmp(sensor2_cmd, 'i')
+        index = 'i';
+    end
+    
+    % Create the combined command string (exactly four comma-separated tokens)
+    combined_cmd = [pinky, ring, middle, index];
 end
+

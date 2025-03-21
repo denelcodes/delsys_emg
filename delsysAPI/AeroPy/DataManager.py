@@ -35,6 +35,7 @@ class DataKernel():
         self.sensor1_history = []
         self.sensor2_history = []
 
+
     def processData(self, data_queue):
         """
         Processes the real-time data from the Delsys API, writes sensor data
@@ -42,7 +43,14 @@ class DataKernel():
         """
         outArr = self.GetData()
         
+        if outArr is None:
+            # If no new data is available, pause the MATLAB plot.
+            self.eng.update_plot([], [], True, nargout=0)
+            return
+
+        
         if outArr is not None:
+            
             # Extract the new samples for each sensor
             sensor1_new = []
             sensor2_new = []
@@ -56,15 +64,19 @@ class DataKernel():
             self.sensor1_history.extend(sensor1_new)
             self.sensor2_history.extend(sensor2_new)
 
-            #  call MATLAB with only the new data
+            #  call MATLAB with only the new data 
+            
+            # #FOR MATLAB 
+            #  update_plot(sensor1_new, sensor2_new, pauseFlag)
             self.eng.update_plot(
                 matlab.double(sensor1_new),
                 matlab.double(sensor2_new),
+                False,  # false means  not paused)
                 nargout=0
             )
 
-            print(sensor1_new)
-            print(sensor2_new)
+            # print(sensor1_new)
+            # print(sensor2_new)
 
             # ------------------------------------------------
             # original code to process data for internal storage + queue stuff
