@@ -29,46 +29,24 @@ void setup() {
 
 void loop() {
   if (Serial.available() > 0) {
-    // Read an entire line from serial (expecting format: S1:<cmd>;S2:<cmd>)
+    // Read the entire line until newline
     String input = Serial.readStringUntil('\n');
     input.trim();
     
-    // Parse input if it contains both sensor commands
-    int sepIndex = input.indexOf(';');
-    if (sepIndex != -1) {
-      String sensor1Part = input.substring(0, sepIndex);
-      String sensor2Part = input.substring(sepIndex + 1);
-      
-      char cmd1 = parseCommand(sensor1Part);
-      char cmd2 = parseCommand(sensor2Part);
-      
-      // Actuate for sensor 1 if command is not 'n'
-      if (cmd1 != 'n') {
-        actuateFinger(cmd1);
-      }
-      // Actuate for sensor 2 if command is not 'n' and not duplicate
-      if (cmd2 != 'n' && cmd2 != cmd1) {
-        actuateFinger(cmd2);
+    // Iterate over each character in the input string
+    for (int i = 0; i < input.length(); i++) {
+      char finger = input.charAt(i);
+      // Only process if it's a valid command: p, r, m, or i
+      if (finger == 'p' || finger == 'r' || finger == 'm' || finger == 'i') {
+        actuateFinger(finger);
       }
     }
   }
-}
-
-char parseCommand(String sensorString) {
-  // Expected format: "S1:<cmd>" or "S2:<cmd>"
-  int colonIndex = sensorString.indexOf(':');
-  if (colonIndex != -1 && sensorString.length() > colonIndex + 1) {
-    char cmd = sensorString.charAt(colonIndex + 1);
-    // If the command is one of the valid letters, return it; otherwise, return 'n'
-    if (cmd == 'p' || cmd == 'r' || cmd == 'm' || cmd == 'i') {
-      return cmd;
-    }
-  }
-  return 'n'; // default: no command
 }
 
 void actuateFinger(char finger) {
   Servo* targetServo = nullptr;
+  
   switch(finger) {
     case 'p': targetServo = &servoPinky; break;
     case 'r': targetServo = &servoRing; break;
@@ -78,9 +56,9 @@ void actuateFinger(char finger) {
   }
   
   if (targetServo != nullptr) {
-    // Actuation: move from open (110°) to closed (10°) and back to open (110°)
+    // Actuate: move from open (110°) to closed (10°) and then back to open (110°)
     targetServo->write(10);
-    delay(300);  // Adjust delay as needed for movement
+    delay(300);  // Adjust delay as needed for the movement
     targetServo->write(110);
     delay(300);
   }
