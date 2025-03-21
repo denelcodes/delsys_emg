@@ -1,101 +1,100 @@
-"""
-This is the class that handles the data that is output from the Delsys Trigno Base.
-Create an instance of this and pass it a reference to the Trigno base for initialization.
-See CollectDataController.py for a usage example.
-"""
 import numpy as np
 import matlab.engine
+import os
 
 class DataKernel():
     def __init__(self, trigno_base):
         self.trigno_base = trigno_base
         self.TrigBase = trigno_base.TrigBase
+        
         self.packetCount = 0
         self.sampleCount = 0
-        self.allcollectiondata = []
-        self.channel1time = []
-        self.channel_guids = []
+
+        # These lists store the entire history of data for each channel.
+        # Make sure you have as many sublists here as you have channels.
+        # If your code configures e.g. 2 channels in trigno_base.channel_guids,
+        # you’ll have 2 empty lists below.
+        self.channel_guids = self.trigno_base.channel_guids  # or however you retrieve them
+        self.allcollectiondata = [[] for _ in range(len(self.channel_guids))]
         
+        self.channel1time = []
+
         # Start MATLAB engine
         self.eng = matlab.engine.start_matlab()
 
-        # (Optional) if you need to add the folder that contains 'update_plot.m' to the MATLAB path
-        # self.eng.addpath(r'C:\path\to\folder\with\update_plot')
+        # add the folder containing 'update_plot.m' to the MATLAB path NOT the .m file itself
+        # Adjust this path to point to the folder, not the file.
+        matlab_folder = r"C:\Users\Den\OneDrive - University of Southampton\4th_year\Medical\delsys_emg\matlab"
+        self.eng.addpath(matlab_folder, nargout=0)
 
-        # Example: set up filter parameters in Python if needed,
-        # or you can keep everything in MATLAB.
+        # Optional: Confirm that MATLAB can find 'update_plot.m'
+        found_func = self.eng.which('update_plot.m', nargout=1)
+        print("MATLAB sees update_plot.m at:", found_func)
 
-        # Initialize local sensor histories
+        # Initialize local sensor histories for your real-time plotting
         self.sensor1_history = []
         self.sensor2_history = []
 
     def processData(self, data_queue):
-        """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
-        # Retrieve data from the DelsysAPI via the GetData method
-        # call GetData() to retrieve new data
-        # outArr will be a list of lists where each inner list corresponds to one sensor's data.
-        outArr = self.GetData()  
+        """
+        Processes the real-time data from the Delsys API, writes sensor data
+        to a queue, and calls into MATLAB to update/plot the data.
+        """
+        outArr = self.GetData()
         
-        # check if outArr contian data Only process if new data is available
         if outArr is not None:
-            
-            # extract the new samples for each sensor
+            # Extract the new samples for each sensor
             sensor1_new = []
             sensor2_new = []
 
-            #  outArr[0] is sensor1, outArr[1] is sensor2, etc
             if len(outArr) > 0 and len(outArr[0]) > 0:
                 sensor1_new = outArr[0][0].tolist()
             if len(outArr) > 1 and len(outArr[1]) > 0:
                 sensor2_new = outArr[1][0].tolist()
 
-            # Append these new samples to our local histories
+            # append data
             self.sensor1_history.extend(sensor1_new)
             self.sensor2_history.extend(sensor2_new)
 
-            # -----------------------------------------------------------
-            #  call into MATLAB to process & plot everything
-            # Pass the entire history each time
-            # We need to convert Python lists to MATLAB arrays, e.g. matlab.double()
-            # If your data is large, you may want a more optimized approach.
-            # -----------------------------------------------------------
+            #  call MATLAB with only the new data
             self.eng.update_plot(
-                matlab.double(self.sensor1_history),
-                matlab.double(self.sensor2_history),
-                nargout=0  # no output expected
+                matlab.double(sensor1_new),
+                matlab.double(sensor2_new),
+                nargout=0
             )
 
+            print(sensor1_new)
+            print(sensor2_new)
 
-        #-------- orginal code that processes the data further for internal storage + queueing
-
-            # For each sensor extend its existing data collection with the new data
-            # for i in range(len(outArr)) goes through each index i corresponding to a sensor If outArr has data for 2 sensors, i will be 0, 1,
+            # ------------------------------------------------
+            # original code to process data for internal storage + queue stuff
+            # --------------------------------------------------------
             for i in range(len(outArr)):
-                # Convert the sensor data (assumed to be in the first element of each sublist) to a list 
-                # and append it to the corresponding sensor's stored data in allcollectiondata
-                self.allcollectiondata[i].extend(outArr[i][0].tolist()) # self.allcollectiondata[i]  is the list that holds all previously collected data for the sensor at index i
+                # Extend each channel’s historical list with new samples
+                self.allcollectiondata[i].extend(outArr[i][0].tolist())
+
+            # Now enqueue data packets
             try:
-                #iterates over each packet in the first sensor’s data 
-                # Since all sensors are expected to have the same number of packets
-                # this loop also corresponds to the packets in the other sensors.
+                # outArr[0] is the first channel’s data
+                # We assume each channel has the same number of packets
                 for i in range(len(outArr[0])):
-                    # It checks if the data for the first sensor is one-dimensional.
-                    #If 1D then it means there's only one packet of data, and  code handles it in a straightforward way.
+                    # If the data for the first sensor is 1D, only one packet
                     if np.asarray(outArr[0]).ndim == 1:
-                        # This takes the first sensor's data and appends it to the queue as a list.
                         data_queue.append(list(np.asarray(outArr, dtype='object')[0]))
                     else:
-                        #This extracts the ith data packet from each sensor 
+                        # Extract the i-th data packet from each channel
                         data_queue.append(list(np.asarray(outArr, dtype='object')[:, i]))
+
+                # Update counters (packets & samples)
                 try:
-                     # Update the packet counter by adding the number of packets from sensor 0.
-                    self.packetCount += len(outArr[0])
-                    # Update the sample counter by adding the number of samples in the first packet of sensor 0.
-                    self.sampleCount += len(outArr[0][0])
+                    self.packetCount += len(outArr[0])          # number of packets
+                    self.sampleCount += len(outArr[0][0])       # samples per packet in sensor 0
                 except Exception as e:
                     print("Exception updating counters:", e)
+
             except IndexError as e:
                 print("Index error in processing data:", e)
+
 
     def processYTData(self, data_queue):
         """Processes the data from the DelsysAPI and place it in the data_queue argument"""
