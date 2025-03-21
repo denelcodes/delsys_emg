@@ -119,37 +119,44 @@ function processed = process_data(new_data)
 end
 
 function check_threshold_generic(sensor_data1, sensor_data2, thresholds1, thresholds2)
-    % Persistent variable to hold current combined command string.
-    persistent combined_cmd
-    if isempty(combined_cmd)
-        combined_cmd = '';  % Initialize persistent variable
-    end
-
-    % Only process if both sensor data are non-empty.
+     % Only process if both sensor data are non-empty.
     if ~isempty(sensor_data1) && ~isempty(sensor_data2)
         currentValue1 = sensor_data1(end);  % Latest processed value from sensor_data1
         currentValue2 = sensor_data2(end);  % Latest processed value from sensor_data2
-        
-        % Initialize each token to an empty string.
-        pinky  = '';
-        ring   = '';
-        middle = '';
-        index  = '';
 
-        % Check thresholds in a specific order.
-        % Adjust the conditions below as needed based on your intended logic.
-        if thresholds1.middle_lower <= currentValue1 && currentValue1 <= thresholds1.middle_upper && thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper
-            middle = 'm'
-        elseif thresholds1.pinky_lower <= currentValue1 && currentValue1 <= thresholds1.pinky_upper && thresholds2.pinky_lower <= currentValue2 && currentValue2 <= thresholds2.pinky_upper
-            pinky = 'p'
-        elseif thresholds1.ring_lower <= currentValue1 && currentValue1 <= thresholds1.ring_upper && thresholds2.ring_lower <= currentValue2 && currentValue2 <= thresholds2.ring_upper && currentValue2 >= thresholds2.index_upper  % example adjustment of condition
-            ring = 'r'
-        elseif thresholds1.index_lower <= currentValue1 && currentValue1 <= thresholds1.index_upper && thresholds2.index_lower <= currentValue2 && currentValue2 <= thresholds2.index_upper
-            index = 'i'
+        % Initialize the finger variable
+        finger = '';
+
+        % Check thresholds and assign the corresponding letter to "finger"
+        if thresholds1.middle_lower <= currentValue1 && currentValue1 <= thresholds1.middle_upper && ...
+           thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper
+            finger = 'm';
+        elseif thresholds1.pinky_lower <= currentValue1 && currentValue1 <= thresholds1.pinky_upper && ...
+               thresholds2.pinky_lower <= currentValue2 && currentValue2 <= thresholds2.pinky_upper
+            finger = 'p';
+        elseif thresholds1.ring_lower <= currentValue1 && currentValue1 <= thresholds1.ring_upper && ...
+               thresholds2.ring_lower <= currentValue2 && currentValue2 <= thresholds2.ring_upper && ...
+               currentValue2 >= thresholds2.index_upper  % example adjustment of condition
+            finger = 'r';
+        elseif thresholds1.index_lower <= currentValue1 && currentValue1 <= thresholds1.index_upper && ...
+               thresholds2.index_lower <= currentValue2 && currentValue2 <= thresholds2.index_upper
+            finger = 'i';
         end
 
-        % Combine tokens into one string
-        combined_cmd = [pinky, ring, middle, index];
+        % Write the detected finger letter to the file if one is detected.
+        if ~isempty(finger)
+            write_finger_to_file(finger);
+        end
+    end
+end
+
+function write_finger_to_file(finger)
+    fid = fopen('finger.txt', 'w');  % Open file in write mode to overwrite previous content
+    if fid == -1
+        disp('Error opening file for writing.');
+    else
+        fprintf(fid, '%s', finger);
+        fclose(fid);
     end
 end
 
