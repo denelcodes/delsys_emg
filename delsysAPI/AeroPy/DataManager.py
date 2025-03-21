@@ -1,52 +1,100 @@
-"""
-This is the class that handles the data that is output from the Delsys Trigno Base.
-Create an instance of this and pass it a reference to the Trigno base for initialization.
-See CollectDataController.py for a usage example.
-"""
 import numpy as np
-
+import matlab.engine
+import os
 
 class DataKernel():
     def __init__(self, trigno_base):
         self.trigno_base = trigno_base
         self.TrigBase = trigno_base.TrigBase
+        
         self.packetCount = 0
         self.sampleCount = 0
-        self.allcollectiondata = []
+
+        # These lists store the entire history of data for each channel.
+        # Make sure you have as many sublists here as you have channels.
+        # If your code configures e.g. 2 channels in trigno_base.channel_guids,
+        # you’ll have 2 empty lists below.
+        self.channel_guids = self.trigno_base.channel_guids  # or however you retrieve them
+        self.allcollectiondata = [[] for _ in range(len(self.channel_guids))]
+        
         self.channel1time = []
-        self.channel_guids = []
+
+        # Start MATLAB engine
+        self.eng = matlab.engine.start_matlab()
+
+        # add the folder containing 'update_plot.m' to the MATLAB path NOT the .m file itself
+        # Adjust this path to point to the folder, not the file.
+        matlab_folder = r"C:\Users\Den\OneDrive - University of Southampton\4th_year\Medical\delsys_emg\matlab"
+        self.eng.addpath(matlab_folder, nargout=0)
+
+        # Optional: Confirm that MATLAB can find 'update_plot.m'
+        found_func = self.eng.which('update_plot.m', nargout=1)
+        print("MATLAB sees update_plot.m at:", found_func)
+
+        # Initialize local sensor histories for your real-time plotting
+        self.sensor1_history = []
+        self.sensor2_history = []
 
     def processData(self, data_queue):
-        """Processes the data from the DelsysAPI, writes sensor data to a text file in a simple format, and places it in the data_queue argument"""
-        outArr = self.GetData()  # Retrieve data from the DelsysAPI via the GetData method.
+        """
+        Processes the real-time data from the Delsys API, writes sensor data
+        to a queue, and calls into MATLAB to update/plot the data.
+        """
+        outArr = self.GetData()
         
-        # check if outArr contian data
         if outArr is not None:
-            
-            with open('C:\\Users\\Den\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\raw_emg_data.txt', 'w') as file:
-                # Loop through each sensor's data in the output array.
-                for i, sensor_data in enumerate(outArr):
-                    # Convert the first element of sensor_data (assumed to be a numpy array) to a list
-                    sensor_values = sensor_data[0].tolist() if sensor_data else []
-                    # Write a line to the file with a label for the sensor and its corresponding data
-                    file.write(f"Sensor {i+1}: {sensor_values}\n")
+            # Extract the new samples for each sensor
+            sensor1_new = []
+            sensor2_new = []
 
-            # orginal code that processes the data further for internal storage + queueing
+            if len(outArr) > 0 and len(outArr[0]) > 0:
+                sensor1_new = outArr[0][0].tolist()
+            if len(outArr) > 1 and len(outArr[1]) > 0:
+                sensor2_new = outArr[1][0].tolist()
+
+            # append data
+            self.sensor1_history.extend(sensor1_new)
+            self.sensor2_history.extend(sensor2_new)
+
+            #  call MATLAB with only the new data
+            self.eng.update_plot(
+                matlab.double(sensor1_new),
+                matlab.double(sensor2_new),
+                nargout=0
+            )
+
+            print(sensor1_new)
+            print(sensor2_new)
+
+            # ------------------------------------------------
+            # original code to process data for internal storage + queue stuff
+            # --------------------------------------------------------
             for i in range(len(outArr)):
+                # Extend each channel’s historical list with new samples
                 self.allcollectiondata[i].extend(outArr[i][0].tolist())
+
+            # Now enqueue data packets
             try:
+                # outArr[0] is the first channel’s data
+                # We assume each channel has the same number of packets
                 for i in range(len(outArr[0])):
+                    # If the data for the first sensor is 1D, only one packet
                     if np.asarray(outArr[0]).ndim == 1:
                         data_queue.append(list(np.asarray(outArr, dtype='object')[0]))
                     else:
+                        # Extract the i-th data packet from each channel
                         data_queue.append(list(np.asarray(outArr, dtype='object')[:, i]))
+
+                # Update counters (packets & samples)
                 try:
-                    self.packetCount += len(outArr[0])
-                    self.sampleCount += len(outArr[0][0])
+                    self.packetCount += len(outArr[0])          # number of packets
+                    self.sampleCount += len(outArr[0][0])       # samples per packet in sensor 0
                 except Exception as e:
                     print("Exception updating counters:", e)
+
             except IndexError as e:
                 print("Index error in processing data:", e)
+
 
     def processYTData(self, data_queue):
         """Processes the data from the DelsysAPI and place it in the data_queue argument"""
