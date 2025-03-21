@@ -1,42 +1,37 @@
 import time
 import serial
-# Set up the serial connection (adjust 'COM10' and baud rate as needed)
+import matlab.engine
+
+# Set up the serial connection (adjust port and baud rate as needed)
 ser = serial.Serial('COM6', 9600, timeout=1)
 
 def main():
-    # Open the finger output file in read mode and seek to the end
-    with open("C:\\Users\\dv2g21\\OneDrive - University of Southampton\\4th_year\\Medical\\delsys_emg\\matlab\\finger_output.txt", "r") as f:
-        f.seek(0, 2)  # Move to the end of file
-        sensor1_cmd = 'n'
-        sensor2_cmd = 'n'
-        
-        while True:
-            # During each cycle (0.5 sec window), check for new lines.
-            start_time = time.time()
-            while time.time() - start_time < 0.5:
-                line = f.readline()
-                if line:
-                    line = line.strip()
-                    # Expecting lines like "Sensor1: p" or "Sensor2: i"
-                    if line.startswith("Sensor1:"):
-                        parts = line.split(":")
-                        sensor1_cmd = parts[1].strip() if len(parts) > 1 else 'n'
-                    elif line.startswith("Sensor2:"):
-                        parts = line.split(":")
-                        sensor2_cmd = parts[1].strip() if len(parts) > 1 else 'n'
-                else:
-                    time.sleep(0.1)  # Small delay to avoid busy-waiting
-
-            #if both sensor give the same finger cmd only then move the finger
-            #if sensor1_cmd == sensor2_cmd:
-                # Prepare combined message. Even if no new command, 'n' is sent.
-                message = f"S1:{sensor1_cmd};S2:{sensor2_cmd}\n"
-                print("Sending:", message.strip())
-                ser.write(message.encode('utf-8'))
+    # Start MATLAB engine
+    eng = matlab.engine.start_matlab()
+    matlab_folder = r"C:\Users\Den\OneDrive - University of Southampton\4th_year\Medical\delsys_emg\matlab"
+    eng.addpath(matlab_folder, nargout=0)
+    
+    # Optionally: Run update_plot to update sensor data and global variable.
+    # If update_plot requires sensor data, you'll need to pass that.
+    # For demonstration, we're calling it without actual sensor data.
+    eng.update_plot(0, 0, False, nargout=0)
+    
+    while True:
+        try:
+            # Optionally update the plot (if needed) with new sensor data.
+            # eng.update_plot(new_sensor1, new_sensor2, False, nargout=0)
             
-            # Reset commands for next cycle
-            sensor1_cmd = 'n'
-            sensor2_cmd = 'n'
+            # Retrieve the combined command from MATLAB.
+            combined_cmd = eng.get_combined_finger_command(nargout=1)
+            
+            # Append newline for Arduino's readStringUntil('\n') and send over serial.
+            message = combined_cmd + "\n"
+            print("Sending:", message.strip())
+            ser.write(message.encode('utf-8'))
+        except Exception as e:
+            print("Error:", e)
+        
+        time.sleep(0.5)  # Adjust polling rate as needed.
 
 if __name__ == "__main__":
     main()
