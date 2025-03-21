@@ -98,10 +98,9 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
     % Get the finger value based on current sensor data and thresholds
     finger = check_threshold_generic(sensor1_data, sensor2_data, thresholds1, thresholds2);
 
-    % If a finger is detected, send it to Arduino via serial port
+    % if  finger is detected send it to arduino via serial port 
     if ~isempty(finger)
         if isempty(arduinoSerial) || ~isvalid(arduinoSerial)
-            % Open a serial connection. Adjust 'COM3' and baud rate as needed.
             arduinoSerial = serial('COM3', 'BaudRate', 9600);
             fopen(arduinoSerial);
         end
