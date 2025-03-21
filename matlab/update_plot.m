@@ -31,24 +31,24 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
     % Define threshold structures for both sensors
 
     % Sensor 1 thresholds
-    thresholds1.index_lower  = 0.004213576;
-    thresholds1.index_upper  = 0.005482864;
-    thresholds1.middle_lower = 0.002375097;
-    thresholds1.middle_upper = 0.007241913;
-    thresholds1.ring_lower   = 0.002664693;
-    thresholds1.ring_upper   = 0.007166327;
-    thresholds1.pinky_lower  = 0.002264329;
-    thresholds1.pinky_upper  = 0.004432841;
+    thresholds1.index_lower  = 0.0020;
+    thresholds1.index_upper  = 0.0040;
+    thresholds1.middle_lower = 0.0035;
+    thresholds1.middle_upper = 0.0082;
+    thresholds1.ring_lower   = 0.0031;
+    thresholds1.ring_upper   = 0.0037;
+    thresholds1.pinky_lower  = 0.00371;
+    thresholds1.pinky_upper  = 0.005;
 
     % Sensor 2 thresholds
-    thresholds2.index_lower  = 0.009820486;
-    thresholds2.index_upper  = 0.011985614;
-    thresholds2.middle_lower = 0.004097787;
-    thresholds2.middle_upper = 0.005650073;
-    thresholds2.ring_lower   = 0.003733016;
-    thresholds2.ring_upper   = 0.004955364;
-    thresholds2.pinky_lower  = 0.008331226;
-    thresholds2.pinky_upper  = 0.010205404;
+    thresholds2.index_lower  = 0.00571;
+    thresholds2.index_upper  = 0.009;
+    thresholds2.middle_lower = 0.0021;
+    thresholds2.middle_upper = 0.0057;
+    thresholds2.ring_lower   = 0.0085;
+    thresholds2.ring_upper   = 0.0200;
+    thresholds2.pinky_lower  = 0.0096;
+    thresholds2.pinky_upper  = 0.0130;
 
     %% Update Sensor 1 Plot 
     if isempty(hFig1) || ~isvalid(hFig1)
@@ -99,8 +99,7 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
     end
 
     % Check thresholds for each sensor and update internal state
-    check_threshold_generic(sensor1_data, 'Sensor1', thresholds1);
-    check_threshold_generic(sensor2_data, 'Sensor2', thresholds2);
+    check_threshold_generic(sensor1_data,sensor2_data ,thresholds1 , thresholds2);
 end
 
 function processed = process_data(new_data)
@@ -109,7 +108,7 @@ function processed = process_data(new_data)
     f_upper = 200;
     f_lower = 100;
     averagingsize = 800;     % Number of samples for moving average
-    cutoffFreq2 = 8;         % Low-pass filter cutoff frequency in Hz
+    cutoffFreq2 = 7;         % Low-pass filter cutoff frequency in Hz
     [b,a] = butter(2, cutoffFreq2/(Fs/2));
 
     % Filter and process the data
@@ -119,84 +118,40 @@ function processed = process_data(new_data)
     processed = filtfilt(b, a, averaged);
 end
 
-function check_threshold_generic(sensor_data, sensorLabel, thresholds)
-    % Persistent structure to hold current state for each sensor
-    persistent sensorStates
-    if isempty(sensorStates)
-        sensorStates = struct();
-    end
-    if ~isfield(sensorStates, sensorLabel)
-        sensorStates.(sensorLabel) = '';
+function check_threshold_generic(sensor_data1, sensor_data2, thresholds1, thresholds2)
+    % Persistent variable to hold current combined command string.
+    persistent combined_cmd
+    if isempty(combined_cmd)
+        combined_cmd = '';  % Initialize persistent variable
     end
 
-    if ~isempty(sensor_data)
-        currentValue = sensor_data(end);  % Latest processed value
-        newFinger = '';
+    % Only process if both sensor data are non-empty.
+    if ~isempty(sensor_data1) && ~isempty(sensor_data2)
+        currentValue1 = sensor_data1(end);  % Latest processed value from sensor_data1
+        currentValue2 = sensor_data2(end);  % Latest processed value from sensor_data2
+        
+        % Initialize each token to an empty string.
+        pinky  = '';
+        ring   = '';
+        middle = '';
+        index  = '';
 
-        % Check thresholds in order of priority: index > middle > ring > pinky
-        if (currentValue >= thresholds.index_lower) && (currentValue <= thresholds.index_upper)
-            newFinger = 'i';
-        elseif (currentValue >= thresholds.middle_lower) && (currentValue <= thresholds.middle_upper)
-            newFinger = 'm';
-        elseif (currentValue >= thresholds.ring_lower) && (currentValue <= thresholds.ring_upper)
-            newFinger = 'r';
-        elseif (currentValue >= thresholds.pinky_lower) && (currentValue <= thresholds.pinky_upper)
-            newFinger = 'p';
+        % Check thresholds in a specific order.
+        % Adjust the conditions below as needed based on your intended logic.
+        if thresholds1.middle_lower <= currentValue1 && currentValue1 <= thresholds1.middle_upper && thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper
+            middle = 'm'
+        elseif thresholds1.pinky_lower <= currentValue1 && currentValue1 <= thresholds1.pinky_upper && thresholds2.pinky_lower <= currentValue2 && currentValue2 <= thresholds2.pinky_upper
+            pinky = 'p'
+        elseif thresholds1.ring_lower <= currentValue1 && currentValue1 <= thresholds1.ring_upper && thresholds2.ring_lower <= currentValue2 && currentValue2 <= thresholds2.ring_upper && currentValue2 >= thresholds2.index_upper  % example adjustment of condition
+            ring = 'r'
+        elseif thresholds1.index_lower <= currentValue1 && currentValue1 <= thresholds1.index_upper && thresholds2.index_lower <= currentValue2 && currentValue2 <= thresholds2.index_upper
+            index = 'i'
         end
 
-        % Update the state if there is a change
-        if ~isempty(newFinger) && ~strcmp(newFinger, sensorStates.(sensorLabel))
-            sensorStates.(sensorLabel) = newFinger;
-        end
-
-        % Reset the state if the value falls below the pinky lower threshold
-        if currentValue < thresholds.pinky_lower
-            sensorStates.(sensorLabel) = '';
-        end
+        % Combine tokens into one string
+        combined_cmd = [pinky, ring, middle, index];
     end
 end
 
 
-% --- New function that combines sensor states into one command string ---
-function combined_cmd = get_combined_finger_command()
-    % This function is intended to be called from Python via the MATLAB Engine API.
-    % It returns a string with four comma-separated tokens representing:
-    % [pinky, ring, middle, index]
-    persistent sensorStates
-    if isempty(sensorStates)
-        sensorStates = struct('Sensor1','', 'Sensor2','');
-    else
-        if ~isfield(sensorStates, 'Sensor1')
-            sensorStates.Sensor1 = '';
-        end
-        if ~isfield(sensorStates, 'Sensor2')
-            sensorStates.Sensor2 = '';
-        end
-    end
-
-    sensor1_cmd = sensorStates.Sensor1;
-    sensor2_cmd = sensorStates.Sensor2;
-    
-    % For each finger, if either sensor indicates that finger, mark it active.
-    pinky  = '';
-    ring   = '';
-    middle = '';
-    index  = '';
-    
-    if strcmp(sensor1_cmd, 'p') || strcmp(sensor2_cmd, 'p')
-        pinky = 'p';
-    end
-    if strcmp(sensor1_cmd, 'r') || strcmp(sensor2_cmd, 'r')
-        ring = 'r';
-    end
-    if strcmp(sensor1_cmd, 'm') || strcmp(sensor2_cmd, 'm')
-        middle = 'm';
-    end
-    if strcmp(sensor1_cmd, 'i') || strcmp(sensor2_cmd, 'i')
-        index = 'i';
-    end
-    
-    % Create the combined command string (exactly four comma-separated tokens)
-    combined_cmd = [pinky, ring, middle, index];
-end
 

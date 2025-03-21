@@ -45,21 +45,22 @@ void loop() {
 }
 
 void actuateFinger(char finger) {
-  Servo* targetServo = nullptr;
+  Servo* servo1 = nullptr;
+  int delay1 = 300;
   
   switch(finger) {
-    case 'p': targetServo = &servoPinky; break;
-    case 'r': targetServo = &servoRing; break;
-    case 'm': targetServo = &servoMiddle; break;
-    case 'i': targetServo = &servoIndex; break;
+    case 'p': servo1 = &servoPinky; break;
+    case 'r': servo1 = &servoRing; break;
+    case 'm': servo1 = &servoMiddle; break;
+    case 'i': servo1 = &servoIndex; break;
     default: return; // unknown command; do nothing
   }
   
-  if (targetServo != nullptr) {
-    // Actuate: move from open (110°) to closed (10°) and then back to open (110°)
-    targetServo->write(10);
-    delay(300);  // Adjust delay as needed for the movement
-    targetServo->write(110);
-    delay(300);
+  if (servo1 != nullptr) {
+    // Actuate  open 110 to closed 10 degre and then back to open 110
+    servo1->write(10);
+    delay(delay1);  // aadjust delay as needed for the movement
+    servo1->write(110);
+    delay(delay1);
   }
 }

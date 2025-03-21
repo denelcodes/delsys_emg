@@ -1,5 +1,6 @@
 import numpy as np
 import matlab.engine
+import serial
 import os
 
 class DataKernel():
@@ -12,7 +13,7 @@ class DataKernel():
 
         # These lists store the entire history of data for each channel.
         # Make sure you have as many sublists here as you have channels.
-        # If your code configures e.g. 2 channels in trigno_base.channel_guids,
+        # If  code configures e.g. 2 channels in trigno_base.channel_guids,
         # you’ll have 2 empty lists below.
         self.channel_guids = self.trigno_base.channel_guids  # or however you retrieve them
         self.allcollectiondata = [[] for _ in range(len(self.channel_guids))]
@@ -34,6 +35,7 @@ class DataKernel():
         # Initialize local sensor histories for your real-time plotting
         self.sensor1_history = []
         self.sensor2_history = []
+        
 
 
     def processData(self, data_queue):
@@ -42,13 +44,7 @@ class DataKernel():
         to a queue, and calls into MATLAB to update/plot the data.
         """
         outArr = self.GetData()
-        
-        if outArr is None:
-            # If no new data is available, pause the MATLAB plot.
-            self.eng.update_plot([], [], True, nargout=0)
-            return
-
-        
+    
         if outArr is not None:
             
             # Extract the new samples for each sensor
@@ -75,8 +71,6 @@ class DataKernel():
                 nargout=0
             )
 
-            # print(sensor1_new)
-            # print(sensor2_new)
 
             # ------------------------------------------------
             # original code to process data for internal storage + queue stuff
@@ -107,6 +101,7 @@ class DataKernel():
             except IndexError as e:
                 print("Index error in processing data:", e)
 
+                    
 
     def processYTData(self, data_queue):
         """Processes the data from the DelsysAPI and place it in the data_queue argument"""
