@@ -1,6 +1,5 @@
 function update_plot(sensor1_new, sensor2_new, pauseFlag)
-
-    %needs to be tested
+    % needs to be tested
     if nargin < 3
         pauseFlag = false;
     end
@@ -10,9 +9,8 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
         return;
     end
 
-
-    % Persistent variables store cumulative data and handles
-    persistent hFig1 hFig2 hLine1 hLine2 sensor1_data sensor2_data
+    % Persistent variables store cumulative data, handles, and Arduino serial
+    persistent hFig1 hFig2 hLine1 hLine2 sensor1_data sensor2_data arduinoSerial
     if isempty(sensor1_data)
         sensor1_data = [];
     end
@@ -29,7 +27,6 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
     sensor2_data = [sensor2_data, processed_sensor2];
 
     % Define threshold structures for both sensors
-
     % Sensor 1 thresholds
     thresholds1.index_lower  = 0.0020;
     thresholds1.index_upper  = 0.0040;
@@ -98,9 +95,20 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
         axis auto;
     end
 
-    % Check thresholds for each sensor and update internal state
-    check_threshold_generic(sensor1_data,sensor2_data ,thresholds1 , thresholds2);
+    % Get the finger value based on current sensor data and thresholds
+    finger = check_threshold_generic(sensor1_data, sensor2_data, thresholds1, thresholds2);
+
+    % If a finger is detected, send it to Arduino via serial port
+    if ~isempty(finger)
+        if isempty(arduinoSerial) || ~isvalid(arduinoSerial)
+            % Open a serial connection. Adjust 'COM3' and baud rate as needed.
+            arduinoSerial = serial('COM3', 'BaudRate', 9600);
+            fopen(arduinoSerial);
+        end
+        fprintf(arduinoSerial, '%s\n', finger);
+    end
 end
+
 
 function processed = process_data(new_data)
     % Define sampling parameters
@@ -118,38 +126,27 @@ function processed = process_data(new_data)
     processed = filtfilt(b, a, averaged);
 end
 
-function check_threshold_generic(sensor_data1, sensor_data2, thresholds1, thresholds2)
-    % Persistent variable to hold current combined command string.
-    persistent combined_cmd
-    if isempty(combined_cmd)
-        combined_cmd = '';  % Initialize persistent variable
-    end
-
-    % Only process if both sensor data are non-empty.
+function finger = check_threshold_generic(sensor_data1, sensor_data2, thresholds1, thresholds2)
+    finger = ''; % Default is no finger detected
     if ~isempty(sensor_data1) && ~isempty(sensor_data2)
-        currentValue1 = sensor_data1(end);  % Latest processed value from sensor_data1
-        currentValue2 = sensor_data2(end);  % Latest processed value from sensor_data2
-        
-        % Initialize each token to an empty string.
-        pinky  = '';
-        ring   = '';
-        middle = '';
-        index  = '';
+       currentValue1 = sensor_data1(end);  % Latest processed value from sensor_data1
+       currentValue2 = sensor_data2(end);  % Latest processed value from sensor_data2
 
-        % Check thresholds in a specific order.
-        % Adjust the conditions below as needed based on your intended logic.
-        if thresholds1.middle_lower <= currentValue1 && currentValue1 <= thresholds1.middle_upper && thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper
-            middle = 'm'
-        elseif thresholds1.pinky_lower <= currentValue1 && currentValue1 <= thresholds1.pinky_upper && thresholds2.pinky_lower <= currentValue2 && currentValue2 <= thresholds2.pinky_upper
-            pinky = 'p'
-        elseif thresholds1.ring_lower <= currentValue1 && currentValue1 <= thresholds1.ring_upper && thresholds2.ring_lower <= currentValue2 && currentValue2 <= thresholds2.ring_upper && currentValue2 >= thresholds2.index_upper  % example adjustment of condition
-            ring = 'r'
-        elseif thresholds1.index_lower <= currentValue1 && currentValue1 <= thresholds1.index_upper && thresholds2.index_lower <= currentValue2 && currentValue2 <= thresholds2.index_upper
-            index = 'i'
-        end
-
-        % Combine tokens into one string
-        combined_cmd = [pinky, ring, middle, index];
+       % Check thresholds and assign the corresponding letter to "finger"
+       if thresholds1.middle_lower <= currentValue1 && currentValue1 <= thresholds1.middle_upper && ...
+          thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper
+           finger = 'm';
+       elseif thresholds1.pinky_lower <= currentValue1 && currentValue1 <= thresholds1.pinky_upper && ...
+              thresholds2.pinky_lower <= currentValue2 && currentValue2 <= thresholds2.pinky_upper
+           finger = 'p';
+       elseif thresholds1.ring_lower <= currentValue1 && currentValue1 <= thresholds1.ring_upper && ...
+              thresholds2.ring_lower <= currentValue2 && currentValue2 <= thresholds2.ring_upper && ...
+              currentValue2 >= thresholds2.index_upper  % example adjustment of condition
+           finger = 'r';
+       elseif thresholds1.index_lower <= currentValue1 && currentValue1 <= thresholds1.index_upper && ...
+              thresholds2.index_lower <= currentValue2 && currentValue2 <= thresholds2.index_upper
+           finger = 'i';
+       end
     end
 end
 
