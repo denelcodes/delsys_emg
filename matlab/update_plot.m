@@ -105,6 +105,11 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
         end
         writeline(arduinoSerial, finger);
         fprintf('Sent finger: %c\n', finger)
+         
+        % just in case Write the finger into a text file
+        % fid = fopen('finger_log.txt', 'a');
+        % fprintf(fid, '%c\n', finger);
+        % fclose(fid);
     end
 end
 
