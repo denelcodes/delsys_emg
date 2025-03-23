@@ -107,7 +107,7 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
         fprintf('Sent finger: %c\n', finger)
          
         % just in case Write the finger into a text file
-        % fid = fopen('finger_log.txt', 'a');
+        % fid = fopen('finger_log.txt', 'w');
         % fprintf(fid, '%c\n', finger);
         % fclose(fid);
     end
