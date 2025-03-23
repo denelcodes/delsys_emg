@@ -36,14 +36,19 @@ void loop() {
     // Iterate over each character in the input string
     for (int i = 0; i < input.length(); i++) {
       char finger = input.charAt(i);
+      
+      // in case its \r instead of \n at the end of the string skip it
+      if (finger == '\r') {
+          continue;
+      }
+      
       // Only process if it's a valid command: p, r, m, or i
       if (finger == 'p' || finger == 'r' || finger == 'm' || finger == 'i') {
-        actuateFinger(finger);
+          actuateFinger(finger);
       }
     }
   }
 }
-
 void actuateFinger(char finger) {
   Servo* servo1 = nullptr;
   int delay1 = 300;
