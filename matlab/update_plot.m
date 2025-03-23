@@ -9,7 +9,7 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
         return;
     end
 
-    % Persistent variables store cumulative data, handles, and Arduino serial
+    % persistent variables store cumulative data, and arduino serial local scope
     persistent hFig1 hFig2 hLine1 hLine2 sensor1_data sensor2_data arduinoSerial
     if isempty(sensor1_data)
         sensor1_data = [];
@@ -37,7 +37,7 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
     thresholds1.pinky_lower  = 0.00371;
     thresholds1.pinky_upper  = 0.005;
 
-    % Sensor 2 thresholds
+    % Sensor 2 thresholdss
     thresholds2.index_lower  = 0.00571;
     thresholds2.index_upper  = 0.009;
     thresholds2.middle_lower = 0.0021;
@@ -95,16 +95,16 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
         axis auto;
     end
 
-    % Get the finger value based on current sensor data and thresholds
-    finger = check_threshold_generic(sensor1_data, sensor2_data, thresholds1, thresholds2);
+    % get the finger value based on current sensor data and thresholds
+    finger = check_threshold(sensor1_data, sensor2_data, thresholds1, thresholds2);
 
-    % if  finger is detected send it to arduino via serial port 
+    % if  finger detected send it to arduino via serial port 
     if ~isempty(finger)
         if isempty(arduinoSerial) || ~isvalid(arduinoSerial)
-            arduinoSerial = serial('COM3', 'BaudRate', 9600);
-            fopen(arduinoSerial);
+            arduinoSerial = serialport('COM6', 9600);
         end
-        fprintf(arduinoSerial, '%s\n', finger);
+        writeline(arduinoSerial, finger);
+        fprintf('Sent finger: %c\n', finger)
     end
 end
 
@@ -125,13 +125,13 @@ function processed = process_data(new_data)
     processed = filtfilt(b, a, averaged);
 end
 
-function finger = check_threshold_generic(sensor_data1, sensor_data2, thresholds1, thresholds2)
+function finger = check_threshold(sensor_data1, sensor_data2, thresholds1, thresholds2)
     finger = ''; % Default is no finger detected
     if ~isempty(sensor_data1) && ~isempty(sensor_data2)
        currentValue1 = sensor_data1(end);  % Latest processed value from sensor_data1
-       currentValue2 = sensor_data2(end);  % Latest processed value from sensor_data2
+       currentValue2 = sensor_data2(end);  
 
-       % Check thresholds and assign the corresponding letter to "finger"
+       % Check thresholds and assign the corresponding letter to "finger" LOGIC/ALGORITHM 
        if thresholds1.middle_lower <= currentValue1 && currentValue1 <= thresholds1.middle_upper && ...
           thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper
            finger = 'm';
@@ -140,7 +140,7 @@ function finger = check_threshold_generic(sensor_data1, sensor_data2, thresholds
            finger = 'p';
        elseif thresholds1.ring_lower <= currentValue1 && currentValue1 <= thresholds1.ring_upper && ...
               thresholds2.ring_lower <= currentValue2 && currentValue2 <= thresholds2.ring_upper && ...
-              currentValue2 >= thresholds2.index_upper  % example adjustment of condition
+              currentValue2 >= thresholds2.index_upper  
            finger = 'r';
        elseif thresholds1.index_lower <= currentValue1 && currentValue1 <= thresholds1.index_upper && ...
               thresholds2.index_lower <= currentValue2 && currentValue2 <= thresholds2.index_upper
