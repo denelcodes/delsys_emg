@@ -32,20 +32,20 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
     thresholds1.index_upper  = 0.0040;
     thresholds1.middle_lower = 0.0035;
     thresholds1.middle_upper = 0.0082;
-    thresholds1.ring_lower   = 0.0031;
-    thresholds1.ring_upper   = 0.0037;
-    thresholds1.pinky_lower  = 0.00371;
-    thresholds1.pinky_upper  = 0.005;
+    thresholds1.ring_lower   = 0.0020;
+    thresholds1.ring_upper   = 0.0047;
+    thresholds1.pinky_lower  = 0.0018;
+    thresholds1.pinky_upper  = 0.0031;
 
     % Sensor 2 thresholdss
     thresholds2.index_lower  = 0.00571;
     thresholds2.index_upper  = 0.009;
     thresholds2.middle_lower = 0.0021;
     thresholds2.middle_upper = 0.0057;
-    thresholds2.ring_lower   = 0.0085;
-    thresholds2.ring_upper   = 0.0200;
-    thresholds2.pinky_lower  = 0.0096;
-    thresholds2.pinky_upper  = 0.0130;
+    thresholds2.ring_lower   = 0.015;
+    thresholds2.ring_upper   = 0.0300;
+    thresholds2.pinky_lower  = 0.0085;
+    thresholds2.pinky_upper  = 0.015;
 
     %% Update Sensor 1 Plot 
     if isempty(hFig1) || ~isvalid(hFig1)
@@ -95,21 +95,22 @@ function update_plot(sensor1_new, sensor2_new, pauseFlag)
         axis auto;
     end
 
+
     % get the finger value based on current sensor data and thresholds
     finger = check_threshold(sensor1_data, sensor2_data, thresholds1, thresholds2);
 
     % if  finger detected send it to arduino via serial port 
     if ~isempty(finger)
         if isempty(arduinoSerial) || ~isvalid(arduinoSerial)
-            arduinoSerial = serialport('COM6', 9600);
+            arduinoSerial = serialport('COM14', 9600);
         end
         writeline(arduinoSerial, finger);
         fprintf('Sent finger: %c\n', finger)
          
         % just in case Write the finger into a text file
-        % fid = fopen('finger_log.txt', 'w');
-        % fprintf(fid, '%c\n', finger);
-        % fclose(fid);
+        fid = fopen('C:\Users\Den\OneDrive - University of Southampton\4th_year\Medical\delsys_emg\game\finger_log.txt', 'w');
+        fprintf(fid, '%c\n', finger);
+        fclose(fid);
     end
 end
 
@@ -136,19 +137,31 @@ function finger = check_threshold(sensor_data1, sensor_data2, thresholds1, thres
        currentValue1 = sensor_data1(end);  % Latest processed value from sensor_data1
        currentValue2 = sensor_data2(end);  
 
+       median1array = [0.0033 0.00404 0.00345 0.00393];
+       diff1array = [0 0 0 0];
+       median2array = [0.0077 0.00482 0.01 0.0112];
+       diff2array = [0 0 0 0];
+       for i = 1:length(median1array)
+           diff1array(i) = abs(median1array(i) - currentValue1);       
+       end
+       for i = 1:length(median2array)
+           diff2array(i) = abs(median2array(i) - currentValue2);       
+       end
+       [A1, location1] = min(diff1array);
+       [A2, location2] = min(diff2array);
+
        % Check thresholds and assign the corresponding letter to "finger" LOGIC/ALGORITHM 
        if thresholds1.middle_lower <= currentValue1 && currentValue1 <= thresholds1.middle_upper && ...
-          thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper
+          thresholds2.middle_lower <= currentValue2 && currentValue2 <= thresholds2.middle_upper 
            finger = 'm';
        elseif thresholds1.pinky_lower <= currentValue1 && currentValue1 <= thresholds1.pinky_upper && ...
               thresholds2.pinky_lower <= currentValue2 && currentValue2 <= thresholds2.pinky_upper
            finger = 'p';
        elseif thresholds1.ring_lower <= currentValue1 && currentValue1 <= thresholds1.ring_upper && ...
               thresholds2.ring_lower <= currentValue2 && currentValue2 <= thresholds2.ring_upper && ...
-              currentValue2 >= thresholds2.index_upper  
+              currentValue2 >= thresholds2.index_upper 
            finger = 'r';
-       elseif thresholds1.index_lower <= currentValue1 && currentValue1 <= thresholds1.index_upper && ...
-              thresholds2.index_lower <= currentValue2 && currentValue2 <= thresholds2.index_upper
+       elseif location1 == 1 && location2 == 1
            finger = 'i';
        end
     end

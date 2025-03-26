@@ -11,7 +11,7 @@ class DataKernel():
         self.packetCount = 0
         self.sampleCount = 0
 
-        # These lists store the entire history of data for each channel.
+        #  lists store the entire history of data for each channel.
         # Make sure you have as many sublists here as you have channels.
         # If  code configures e.g. 2 channels in trigno_base.channel_guids,
         # you’ll have 2 empty lists below.

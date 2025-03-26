@@ -15,3 +15,4 @@ delsysAPI/Plotter/__pycache__/GenericPlot.cpython-311.pyc
 delsysAPI/Export/__pycache__/CsvWriter.cpython-311.pyc
 delsysAPI/StartMenu/__pycache__/StartWindow.cpython-311.pyc
 delsysAPI/UIControls/__pycache__/LandingScreenController.cpython-311.pyc
+matlab/update_plot.asv
