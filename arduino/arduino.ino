@@ -21,10 +21,10 @@ void setup() {
   servoIndex.attach(pinIndex);
   
   // Initialize all servos to open position (110 degrees)
-  servoPinky.write(110);
-  servoRing.write(110);
-  servoMiddle.write(110);
-  servoIndex.write(110);
+  servoPinky.write(130);
+  servoRing.write(130);
+  servoMiddle.write(160);
+  servoIndex.write(130);
 }
 
 void loop() {
@@ -62,10 +62,37 @@ void actuateFinger(char finger) {
   }
   
   if (servo1 != nullptr) {
+
+    if(servo1 == &servoMiddle){
     // Actuate  open 110 to closed 10 degre and then back to open 110
     servo1->write(10);
     delay(delay1);  // aadjust delay as needed for the movement
-    servo1->write(110);
+    servo1->write(160);
     delay(delay1);
+    }
+    
+    if(servo1 == &servoPinky){
+    // Actuate  open 110 to closed 10 degre and then back to open 110
+    servo1->write(10);
+    delay(delay1);  // aadjust delay as needed for the movement
+    servo1->write(130);
+    delay(delay1);
+    }
+        if(servo1 == &servoRing){
+    // Actuate  open 110 to closed 10 degre and then back to open 110
+    servo1->write(10);
+    delay(delay1);  // aadjust delay as needed for the movement
+    servo1->write(130);
+    delay(delay1);
+    }
+        if(servo1 == &servoIndex){
+    // Actuate  open 110 to closed 10 degre and then back to open 110
+    servo1->write(10);
+    delay(delay1);  // aadjust delay as needed for the movement
+    servo1->write(130);
+    delay(delay1);
+    }
+
+    
   }
 }
